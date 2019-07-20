@@ -21,8 +21,9 @@ try:
 
     # Send data
     print('Sending message to host %s\n%s:' % (dest_address[0],message))
-    sent = sock.sendto(message, dest_address)
     sock.bind(('', 10000))
+    sent = sock.sendto(message, dest_address)
+
     # Receive response
     if args.cmd == 'RUN' or args.cmd == 'GET':
         print ('Waiting an answer...\n')
