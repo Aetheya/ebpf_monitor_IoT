@@ -70,21 +70,16 @@ int detect_snt_pkts(struct pt_regs *ctx, void *skb){
 }
 """
 stats_global = 0
-# Loads eBPF program
+running_global = 0
 b = BPF(text=prog)
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+host_address = ('', 10000)
 
 
 def update_stats(cpu, data, size):
     global stats_global
     event = b["events"].event(data)
-    stats_global = event;
-
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-host_address = ('', 10000)
-
-print('Listening on address: %s port: %s' % host_address)
-sock.bind(host_address)
+    stats_global = event
 
 
 def send_stats(initiator, server, port):
@@ -99,46 +94,83 @@ def send_stats(initiator, server, port):
     print('Message sent to %s: \n%s\n' % (server[0], data))
 
 
-while True:
-    print('Waiting to receive message...')
-    data, init_address = sock.recvfrom(4096)
+def start_eBPF():
+    global running_global
+    running_global = 1
 
-    print('\nReceived message from %s:\n%s\n' % (init_address[0], data))
-    j = json.loads(data);
+    b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
+    b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
 
-    if j['cmd'] == 'RUN':
-        interval = j['time']
-        print('Gathering statistics for %s seconds...' % interval)
+    b["events"].open_perf_buffer(update_stats)
 
-        b = BPF(text=prog)
 
-        b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
-        b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
+def cmd_RUN(command):
+    global running_global
+    running_global = 1
+    interval = command['time']
+    print('Gathering statistics for %s seconds...' % interval)
 
-        future = time.time() + interval
-        b["events"].open_perf_buffer(update_stats)
-        while time.time() < future:
-            sleep(0.01)
-        send_stats(init_address, j['server'], j['port'])
-        b.detach_kprobe("ip_rcv")
-        b.detach_kprobe("ip_output")
-    if j['cmd'] == 'START':
-        print('Gathering statistics...')
+    start_eBPF()
+    future = time.time() + interval
+    while time.time() < future:
+        sleep(0.01)
+    send_stats(init_address, command['server'], command['port'])
+    b.detach_kprobe("ip_rcv")
+    b.detach_kprobe("ip_output")
+    running_global = 0
 
-        b = BPF(text=prog)
 
-        b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
-        b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
+def cmd_START(command):
+    print('Gathering of statistics started')
+    global running_global
+    running_global = 1
+    start_eBPF()
 
-        b["events"].open_perf_buffer(update_stats)
+    b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
+    b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
 
-        data_0, init_address_0 = sock.recvfrom(4096)
-        print(data_0)
-        j_0 = json.loads(data_0)
+    b["events"].open_perf_buffer(update_stats)
 
-        if j_0['cmd'] == 'GET':
-            print('OK')
-            send_stats(init_address_0, j_0['server'], j_0['port'])
 
-        b.detach_kprobe("ip_rcv")
-        b.detach_kprobe("ip_output")
+def cmd_GET(command):
+    send_stats(init_address, command['server'], command['port'])
+
+def cmd_STOP(command):
+
+    b.detach_kprobe("ip_rcv")
+    b.detach_kprobe("ip_output")
+    global running_global
+    running_global = 0
+
+
+try:
+    print('Listening on address: %s port: %s' % host_address)
+    sock.bind(host_address)
+
+    while True:
+        print('Waiting to receive message...')
+        data, init_address = sock.recvfrom(4096)
+
+        print('\nReceived message from %s:\n%s\n' % (init_address[0], data))
+        j = json.loads(data);
+        cmd = j['cmd']
+        if cmd == 'RUN' and not running_global:
+            cmd_RUN(j)
+        elif cmd == 'START' and running_global:
+            print("ERROR: Already running")
+        elif cmd == 'START' and not running_global:
+            cmd_START(j)
+        elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
+            error_msg = "ERROR: Must first start the stat gathering with cmd: START"
+            print(error_msg)
+            sock.sendto(error_msg, init_address)
+        elif cmd == 'GET' and running_global:
+            cmd_GET(j)
+        elif cmd == 'STOP' and running_global:
+            cmd_STOP(j)
+        else:
+            print("ERROR: Wrong command")
+
+finally:
+    print('Closing socket')
+    sock.close()
