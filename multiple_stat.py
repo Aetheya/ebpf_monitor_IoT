@@ -88,7 +88,6 @@ def send_stats(initiator, server, port):
     data = json.dumps({"rcv_packets": stats_global.rcv_packets, "snt_packets": stats_global.snt_packets, })
     server = (server, port)
     sock.sendto(data, server)
-    print(server, initiator)
     if server[0] != initiator[0]:
         sock.sendto('ACK: Stats sent to: %s' % server[0], initiator)
     print('Message sent to %s: \n%s\n' % (server[0], data))
@@ -115,6 +114,7 @@ def cmd_RUN(command):
     while time.time() < future:
         sleep(0.01)
     send_stats(init_address, command['server'], command['port'])
+    b["stats_map"].clear()
     b.detach_kprobe("ip_rcv")
     b.detach_kprobe("ip_output")
     running_global = 0
@@ -139,6 +139,7 @@ def cmd_STOP(command):
 
     b.detach_kprobe("ip_rcv")
     b.detach_kprobe("ip_output")
+    b["stats_map"].clear()
     global running_global
     running_global = 0
 
@@ -156,7 +157,7 @@ try:
         cmd = j['cmd']
         if cmd == 'RUN' and not running_global:
             cmd_RUN(j)
-        elif cmd == 'START' and running_global:
+        elif (cmd == 'START' or cmd =='RUN') and running_global:
             print("ERROR: Already running")
         elif cmd == 'START' and not running_global:
             cmd_START(j)
