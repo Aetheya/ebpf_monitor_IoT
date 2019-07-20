@@ -96,6 +96,10 @@ def cmd_STOP(command):
     global running_global
     running_global = 0
 
+def send_error(error_msg, address):
+    print(error_msg)
+    sock.sendto(error_msg, address)
+
 def verify_signature(signed_data):
     data_tab = json.loads(signed_data);
     try:
@@ -121,7 +125,8 @@ def verify_signature(signed_data):
         print("Wrong signature")
         return -1
     except ValueError:
-        print("Wrong key")
+        #Malformed signature
+        print("Malformed signature")
         return -1
 
 try:
@@ -135,7 +140,7 @@ try:
         # j = json.loads(data);
         verified_data = verify_signature(data)
         if verified_data == -1:
-            print("Bad signature")
+            send_error("Bad signature", init_address)
         else:
             j = json.loads(verified_data)
             print('\nReceived message from %s:\n%s\n' % (init_address[0], verified_data))
@@ -148,9 +153,7 @@ try:
             elif cmd == 'START' and not running_global:
                 cmd_START(j)
             elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
-                error_msg = "ERROR: Must first start the stat gathering with cmd: START"
-                print(error_msg)
-                sock.sendto(error_msg, init_address)
+                send_error("ERROR: Must first start the stat gathering with cmd: START",init_address)
             elif cmd == 'GET' and running_global:
                 cmd_GET(j)
             elif cmd == 'STOP' and running_global:
