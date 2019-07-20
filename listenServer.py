@@ -8,6 +8,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 try:
 
     # Receive response
+    sock.bind(('', 10000))
     print ('Waiting an answer...\n')
     data, server = sock.recvfrom(4096)
     print('Received message from %s:\n%s' % (server[0],data) )

@@ -93,7 +93,8 @@ def send_stats(initiator, server, port):
     data = json.dumps({"rcv_packets": stats_global.rcv_packets, "snt_packets": stats_global.snt_packets, })
     server = (server, port)
     sock.sendto(data, server)
-    if server != initiator:
+    print(server, initiator)
+    if server[0] != initiator[0]:
         sock.sendto('ACK: Stats sent to: %s' % server[0], initiator)
     print('Message sent to %s: \n%s\n' % (server[0], data))
 
@@ -134,6 +135,7 @@ while True:
         data_0, init_address_0 = sock.recvfrom(4096)
         print(data_0)
         j_0 = json.loads(data_0)
+
         if j_0['cmd'] == 'GET':
             print('OK')
             send_stats(init_address_0, j_0['server'], j_0['port'])
