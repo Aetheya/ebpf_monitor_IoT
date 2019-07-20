@@ -98,14 +98,15 @@ def cmd_STOP(command):
 
 def verify_signature(signed_data):
     data_tab = json.loads(signed_data);
-    with open("public_key.pem", "rb") as key_file:
-        public_key = serialization.load_pem_public_key(
-            key_file.read(),
-            backend=default_backend()
-        )
     try:
+        with open("public_key.pem", "rb") as key_file:
+            public_key = serialization.load_pem_public_key(
+                key_file.read(),
+                backend=default_backend()
+            )
+
         public_key.verify(
-            signature=data_tab['signature'],
+            signature=base64.urlsafe_b64decode(str(data_tab['signature'])),
             data=data_tab['message'].encode('utf-8'),
             padding=padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
@@ -118,6 +119,10 @@ def verify_signature(signed_data):
     except InvalidSignature:
         #Wrong signature
         print("Wrong signature")
+        return -1
+    except ValueError:
+        print("Wrong key")
+        return -1
 
 try:
     print('Listening on address: %s port: %s' % host_address)
@@ -127,26 +132,31 @@ try:
         print('Waiting to receive message...')
         data, init_address = sock.recvfrom(4096)
 
-        print('\nReceived message from %s:\n%s\n' % (init_address[0], data))
-        #j = json.loads(data);
-        j = json.loads(verify_signature(data));
-        cmd = j['cmd']
-        if cmd == 'RUN' and not running_global:
-            cmd_RUN(j)
-        elif (cmd == 'START' or cmd =='RUN') and running_global:
-            print("ERROR: Already running")
-        elif cmd == 'START' and not running_global:
-            cmd_START(j)
-        elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
-            error_msg = "ERROR: Must first start the stat gathering with cmd: START"
-            print(error_msg)
-            sock.sendto(error_msg, init_address)
-        elif cmd == 'GET' and running_global:
-            cmd_GET(j)
-        elif cmd == 'STOP' and running_global:
-            cmd_STOP(j)
+        # j = json.loads(data);
+        verified_data = verify_signature(data)
+        if verified_data == -1:
+            print("Bad signature")
         else:
-            print("ERROR: Wrong command")
+            j = json.loads(verified_data)
+            print('\nReceived message from %s:\n%s\n' % (init_address[0], verified_data))
+
+            cmd = j['cmd']
+            if cmd == 'RUN' and not running_global:
+                cmd_RUN(j)
+            elif (cmd == 'START' or cmd =='RUN') and running_global:
+                print("ERROR: Already running")
+            elif cmd == 'START' and not running_global:
+                cmd_START(j)
+            elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
+                error_msg = "ERROR: Must first start the stat gathering with cmd: START"
+                print(error_msg)
+                sock.sendto(error_msg, init_address)
+            elif cmd == 'GET' and running_global:
+                cmd_GET(j)
+            elif cmd == 'STOP' and running_global:
+                cmd_STOP(j)
+            else:
+                print("ERROR: Wrong command")
 
 finally:
     print('Closing socket')
