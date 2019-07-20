@@ -5,10 +5,10 @@ import json
 
 #TODO nargs
 parser = argparse.ArgumentParser(description="Parser for cmd")
-parser.add_argument("cmd", choices=['RUN'])
+parser.add_argument("cmd", choices=['RUN', 'START', 'GET'])
 parser.add_argument("-t","--time", type=int, default=3)
 parser.add_argument("dest", default='192.168.1.8')#ebpf machine
-parser.add_argument("-s","--server",default="192.168.1.13")
+parser.add_argument("-s","--server",default="192.168.1.8")
 parser.add_argument("-p","--port",default=10000)
 args = parser.parse_args()
 
@@ -24,9 +24,13 @@ try:
     sent = sock.sendto(message, dest_address)
 
     # Receive response
-    print ('Waiting an answer...\n')
-    data, server = sock.recvfrom(4096)
-    print('Received message from %s:\n%s' % (server[0],data) )
+    if args.cmd == 'RUN' or args.cmd == 'GET':
+        print ('Waiting an answer...\n')
+        data, server = sock.recvfrom(4096)
+        print('Received message from %s:\n%s' % (server[0],data) )
+
+    else:
+        print('CMD sent')
 
 finally:
     print ('Closing socket')
