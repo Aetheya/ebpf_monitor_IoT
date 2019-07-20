@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description="Parser for cmd")
 parser.add_argument("cmd", choices=['RUN', 'START', 'GET'])
 parser.add_argument("-t","--time", type=int, default=3)
 parser.add_argument("dest", default='192.168.1.8')#ebpf machine
-parser.add_argument("-s","--server",default="192.168.1.8")
+parser.add_argument("-s","--server",default="192.168.1.13")
 parser.add_argument("-p","--port",default=10000)
 args = parser.parse_args()
 
