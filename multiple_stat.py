@@ -5,48 +5,61 @@ import ctypes as ct
 import datetime
 import socket
 import sys
-from bcc.utils import printb
 import time
 from time import sleep
 import json
-
-import base64
 import logging
 
+import base64
 from cryptography.exceptions import InvalidSignature
-from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 stats_global = 0
 running_global = 0
 b = BPF(src_file="ebpf.c")
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 host_address = ('', 10000)
 
 
+def serialize_stats():
+    """Gathered statistics to JSON format"""
+    global stats_global
+    serialized = json.dumps({"rcv_packets": stats_global.rcv_packets,
+                             "snt_packets": stats_global.snt_packets,
+                             })
+    return serialized
+
+
 def update_stats(cpu, data, size):
+    """Callback fun triggered when buffer_poll"""
     global stats_global
     event = b["events"].event(data)
     stats_global = event
 
 
 def send_stats(initiator, server, port):
-    global stats_global
+    """Sends statistics to server and ack to the initiator"""
     b.perf_buffer_poll()
-    data = json.dumps({"rcv_packets": stats_global.rcv_packets, "snt_packets": stats_global.snt_packets, })
-    server = (server, port)
-    sock.sendto(data, server)
-    if server[0] != initiator[0]:
-        sock.sendto('ACK: Stats sent to: %s' % server[0], initiator)
-    print('Message sent to %s: \n%s\n' % (server[0], data))
+    dst = (server, port)
+    json_stats = serialize_stats()
+
+    sock.sendto(json_stats, dst)
+    logger.info('STATS to %s: \n%s\n' % (dst[0], json_stats))
+
+    if dst[0] != initiator[0]:
+        sock.sendto('ACK: Stats sent to: %s' % dst[0], initiator)
+        logger.info('ACK to %s ' % initiator)
 
 
-def start_eBPF():
+def start_ebpf():
+    """Start eBPF statistic gathering"""
     global running_global
     running_global = 1
 
@@ -56,54 +69,59 @@ def start_eBPF():
     b["events"].open_perf_buffer(update_stats)
 
 
-def cmd_RUN(command):
+def stop_ebpf():
+    """Stop eBPF statistic gathering"""
     global running_global
-    running_global = 1
-    interval = command['time']
-    print('Gathering statistics for %s seconds...' % interval)
+    running_global = 0
 
-    start_eBPF()
-    future = time.time() + interval
+    b.detach_kprobe("ip_rcv")
+    b.detach_kprobe("ip_output")
+
+    b["stats_map"].clear()
+
+
+def cmd_run(init_address, command):
+    """Run eBPF statistic gathering for x seconds"""
+    logger.info('RUN for %s sec' % command['time'])
+
+    start_ebpf()
+    future = time.time() + command['time']
     while time.time() < future:
         sleep(0.01)
+
     send_stats(init_address, command['server'], command['port'])
-    b["stats_map"].clear()
-    b.detach_kprobe("ip_rcv")
-    b.detach_kprobe("ip_output")
-    running_global = 0
+    stop_ebpf()
 
 
-def cmd_START(command):
-    print('Gathering of statistics started')
-    global running_global
-    running_global = 1
-    start_eBPF()
-
-    b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
-    b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
-
-    b["events"].open_perf_buffer(update_stats)
+def cmd_start(command):
+    """START command process"""
+    logger.info('START')
+    start_ebpf()
 
 
-def cmd_GET(command):
+def cmd_get(init_address, command):
+    """GET command process"""
+    logger.info('GET')
     send_stats(init_address, command['server'], command['port'])
 
-def cmd_STOP(command):
 
-    b.detach_kprobe("ip_rcv")
-    b.detach_kprobe("ip_output")
-    b["stats_map"].clear()
-    global running_global
-    running_global = 0
+def cmd_stop(command):
+    """STOP command process"""
+    logger.info('STOP')
+    stop_ebpf()
+
 
 def send_error(error_msg, address):
-    print(error_msg)
+    """Send error to the indicated address"""
+    logger.info('Error message sent to %s: %s' % (address[0], error_msg))
     sock.sendto(error_msg, address)
 
+
 def verify_signature(signed_data):
-    data_tab = json.loads(signed_data);
+    """Verification of signature"""
+    data_tab = json.loads(signed_data)
     try:
-        with open("public_key.pem", "rb") as key_file:
+        with open('public_key.pem', 'rb') as key_file:
             public_key = serialization.load_pem_public_key(
                 key_file.read(),
                 backend=default_backend()
@@ -118,49 +136,54 @@ def verify_signature(signed_data):
             ),
             algorithm=hashes.SHA256()
         )
-        #Signature is correct
+        logger.info('Verified host')
         return data_tab['message']
     except InvalidSignature:
-        #Wrong signature
-        print("Wrong signature")
+        logger.error('Wrong signature - Spoofing attempt')
         return -1
     except ValueError:
-        #Malformed signature
-        print("Malformed signature")
+        logger.error('Malformed signature')
         return -1
 
-try:
-    print('Listening on address: %s port: %s' % host_address)
-    sock.bind(host_address)
 
-    while True:
-        print('Waiting to receive message...')
-        data, init_address = sock.recvfrom(4096)
+def main():
+    try:
+        sock.bind(host_address)
+        logger.info('Socket binded to (addr:[%s],port:[%s])' %host_address)
+        while True:
+            print('Waiting to receive message...')
+            data, init_address = sock.recvfrom(4096)
+            logger.info('Message received')
 
-        # j = json.loads(data);
-        verified_data = verify_signature(data)
-        if verified_data == -1:
-            send_error("Bad signature", init_address)
-        else:
-            j = json.loads(verified_data)
-            print('\nReceived message from %s:\n%s\n' % (init_address[0], verified_data))
-
-            cmd = j['cmd']
-            if cmd == 'RUN' and not running_global:
-                cmd_RUN(j)
-            elif (cmd == 'START' or cmd =='RUN') and running_global:
-                print("ERROR: Already running")
-            elif cmd == 'START' and not running_global:
-                cmd_START(j)
-            elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
-                send_error("ERROR: Must first start the stat gathering with cmd: START",init_address)
-            elif cmd == 'GET' and running_global:
-                cmd_GET(j)
-            elif cmd == 'STOP' and running_global:
-                cmd_STOP(j)
+            verified_data = verify_signature(data)
+            if verified_data == -1:
+                send_error('Bad signature', init_address)
             else:
-                print("ERROR: Wrong command")
+                j = json.loads(verified_data)
+                print('\nReceived message from %s:\n%s\n' % (init_address[0], verified_data))
 
-finally:
-    print('Closing socket')
-    sock.close()
+                cmd = j['cmd']
+                if cmd == 'RUN' and not running_global:
+                    cmd_run(init_address, j)
+                elif (cmd == 'START' or cmd == 'RUN') and running_global:
+                    logger.warning('Already running')
+                elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
+                    logger.error('Must first start the stat gathering with cmd: START')
+                    send_error('ERROR: Must first start the stat gathering with cmd: START', init_address)
+                elif cmd == 'START' and not running_global:
+                    cmd_start(j)
+                elif cmd == 'GET' and running_global:
+                    cmd_get(init_address, j)
+                elif cmd == 'STOP' and running_global:
+                    cmd_stop(j)
+                else:
+                    logger.error('Wrong command')
+                    print('ERROR: Wrong command')
+
+    finally:
+        logger.info('Closing socket')
+        sock.close()
+
+
+if __name__ == '__main__':
+    main()
