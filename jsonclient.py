@@ -46,7 +46,7 @@ try:
     print('Signing message...')
 
     print('Sending message to host %s\n%s:' % (dest_address[0], command))
-    sock.bind(('', 10000))
+    sock.bind(('', 10001))
     # sent = sock.sendto(command, dest_address)
     sent = sock.sendto(sign(command), dest_address)
 

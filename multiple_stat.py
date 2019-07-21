@@ -55,7 +55,7 @@ def send_stats(initiator, server, port):
 
     if dst[0] != initiator[0]:
         sock.sendto('ACK: Stats sent to: %s' % dst[0], initiator)
-        logger.info('ACK to %s ' % initiator)
+        logger.info('ACK to %s ' % initiator[0])
 
 
 def start_ebpf():
