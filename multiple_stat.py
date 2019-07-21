@@ -1,12 +1,8 @@
 #!/usr/bin/python
 
 from bcc import BPF
-import ctypes as ct
-import datetime
 import socket
-import sys
 import time
-from time import sleep
 import json
 import logging
 
@@ -18,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
 stats_global = 0
 running_global = 0
@@ -52,10 +48,12 @@ def send_stats(initiator, server, port):
 
     sock.sendto(json_stats, dst)
     logger.info('STATS to %s: \n%s\n' % (dst[0], json_stats))
+    print('STATS to %s: \n%s\n' % (dst[0], json_stats))
 
     if dst[0] != initiator[0]:
         sock.sendto('ACK: Stats sent to: %s' % dst[0], initiator)
         logger.info('ACK to %s ' % initiator[0])
+        print('ACK to %s ' % initiator[0])
 
 
 def start_ebpf():
@@ -87,7 +85,7 @@ def cmd_run(init_address, command):
     start_ebpf()
     future = time.time() + command['time']
     while time.time() < future:
-        sleep(0.01)
+        time.sleep(0.01)
 
     send_stats(init_address, command['server'], command['port'])
     stop_ebpf()
@@ -149,7 +147,7 @@ def verify_signature(signed_data):
 def main():
     try:
         sock.bind(host_address)
-        logger.info('Socket binded to (addr:[%s],port:[%s])' %host_address)
+        logger.info('Socket binded to (addr:[%s],port:[%s])' % host_address)
         while True:
             print('Waiting to receive message...')
             data, init_address = sock.recvfrom(4096)
