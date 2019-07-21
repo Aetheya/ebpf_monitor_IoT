@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import hashes
 parser = argparse.ArgumentParser(description="Parser for cmd")
 parser.add_argument("cmd", choices=['RUN', 'START', 'GET', 'STOP'])
 parser.add_argument("-t", "--time", type=int, default=3)
-parser.add_argument("-d", default='192.168.1.8')  # ebpf machine
+parser.add_argument("-d", "--dest", default='192.168.1.8')  # ebpf machine
 parser.add_argument("-s", "--server", default="192.168.1.13")
 parser.add_argument("-p", "--port", default=10000)
 args = parser.parse_args()
