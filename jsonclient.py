@@ -10,8 +10,9 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 # TODO nargs
+admin_address = ('', 10000)
 logger = logging.getLogger(__name__)
-#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 
 def parse():
@@ -19,8 +20,8 @@ def parse():
     parser = argparse.ArgumentParser(description="Parser for cmd")
     parser.add_argument("cmd", choices=['RUN', 'START', 'GET', 'STOP'], help='command for the eBPF device')
     parser.add_argument("-t", "--time", type=int, default=3, help='period of stat gathering [RUN]')
-    parser.add_argument("-d", "--dest", default='192.168.1.8', help='eBPF device ip address')  # ebpf machine
-    parser.add_argument("-s", "--server", default="192.168.1.13", help='monitoring server ip address')
+    parser.add_argument("-d", "--dest", default='192.168.1.45', help='eBPF device ip address')  # ebpf machine
+    parser.add_argument("-s", "--server", default="192.168.1.8", help='monitoring server ip address')
     parser.add_argument("-p", "--port", default=10000, help='destination port')
     args = parser.parse_args()
     logger.debug('PARSED: [%s]' % args)
@@ -68,8 +69,9 @@ def main():
     try:
 
         print('Sending message to host %s\n%s:' % (dest_address[0], message))
-        sock.bind(('', 10001))
+        sock.bind(admin_address)
         sock.sendto(sign(message), dest_address)
+        logger.info('Message to %s on port %s' % dest_address)
 
         if command.cmd == 'RUN' or command.cmd == 'GET':
             print('Waiting an answer...\n')
