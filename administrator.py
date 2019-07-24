@@ -10,19 +10,20 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 # TODO nargs
-admin_address = ('', 10000)
+admin_address = ('', 10001)
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+
+
+# logging.basicConfig(level=logging.INFO)
 
 
 def parse():
     """Parse user input command"""
     parser = argparse.ArgumentParser(description="Parser for cmd")
-    parser.add_argument("cmd", choices=['RUN', 'START', 'GET', 'STOP'], help='command for the eBPF device')
+    parser.add_argument("cmd", choices=['RUN', 'START', 'GET', 'STOP', 'PERIOD'], help='command for the eBPF device')
+    parser.add_argument("dest", nargs=2, help='eBPF device ip address')  # ebpf machine
     parser.add_argument("-t", "--time", type=int, default=3, help='period of stat gathering [RUN]')
-    parser.add_argument("-d", "--dest", default='192.168.1.45', help='eBPF device ip address')  # ebpf machine
-    parser.add_argument("-s", "--server", default="192.168.1.8", help='monitoring server ip address')
-    parser.add_argument("-p", "--port", default=10000, help='destination port')
+    parser.add_argument("-s", "--server", nargs=2, help='monitoring server ip address and port')
     args = parser.parse_args()
     logger.debug('PARSED: [%s]' % args)
     return args
@@ -30,7 +31,10 @@ def parse():
 
 def serialize_cmd(command):
     """Input command to JSON format"""
-    return json.dumps({'cmd': command.cmd, 'time': command.time, 'server': command.server, 'port': command.port})
+    if command.server:
+        return json.dumps({'cmd': command.cmd, 'time': command.time, 'server': command.server})
+    else:
+        return json.dumps({'cmd': command.cmd, 'time': command.time})
 
 
 def sign(plain_data):
@@ -63,12 +67,12 @@ def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     command = parse()
 
-    dest_address = (command.dest, command.port)
+    dest_address = (command.dest[0], int(command.dest[1]))
     message = serialize_cmd(command)
 
     try:
 
-        print('Sending message to host %s\n%s:' % (dest_address[0], message))
+        print('Sending message to host %s:%d\n%s' % (dest_address[0], dest_address[1], message))
         sock.bind(admin_address)
         sock.sendto(sign(message), dest_address)
         logger.info('Message to %s on port %s' % dest_address)

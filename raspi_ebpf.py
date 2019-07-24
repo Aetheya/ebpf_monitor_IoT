@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 
 stats_global = 0
 running_global = 0
@@ -40,20 +40,29 @@ def update_stats(cpu, data, size):
     stats_global = event
 
 
-def send_stats(initiator, server, port):
+def send_stats(initiator, command):
     """Sends statistics to server and ack to the initiator"""
     b.perf_buffer_poll()
-    dst = (server, port)
+
     json_stats = serialize_stats()
 
-    sock.sendto(json_stats, dst)
-    logger.info('STATS to %s: \n%s\n' % (dst[0], json_stats))
-    print('STATS to %s: \n%s\n' % (dst[0], json_stats))
+    if 'server' in command:  # Send stats to server
+        stat_dst = (command['server'][0], int(command['server'][1]))
+        ack_dst = initiator
 
-    if dst[0] != initiator[0]:
-        sock.sendto('ACK: Stats sent to: %s' % dst[0], initiator)
-        logger.info('ACK to %s ' % initiator[0])
-        print('ACK to %s ' % initiator[0])
+        sock.sendto(json_stats, stat_dst)
+        logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
+        print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
+        ack_msg = 'ACK: Stats sent to: %s:%s' % (stat_dst[0], stat_dst[1])
+        sock.sendto(ack_msg, ack_dst)
+        logger.info('ACK to %s:%s' % (ack_dst[0], ack_dst[1]))
+        print('ACK to %s:%s ' % (ack_dst[0], ack_dst[1]))
+
+    else:  # Send stats to initiator
+        stat_dst = initiator
+        sock.sendto(json_stats, stat_dst)
+        logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
+        print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
 
 
 def start_ebpf():
@@ -87,7 +96,7 @@ def cmd_run(init_address, command):
     while time.time() < future:
         time.sleep(0.01)
 
-    send_stats(init_address, command['server'], command['port'])
+    send_stats(init_address, command)
     stop_ebpf()
 
 
@@ -100,7 +109,7 @@ def cmd_start(command):
 def cmd_get(init_address, command):
     """GET command process"""
     logger.info('GET')
-    send_stats(init_address, command['server'], command['port'])
+    send_stats(init_address, command)
 
 
 def cmd_stop(command):
