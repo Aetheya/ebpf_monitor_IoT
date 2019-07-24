@@ -20,10 +20,27 @@ logger = logging.getLogger(__name__)
 def parse():
     """Parse user input command"""
     parser = argparse.ArgumentParser(description="Parser for cmd")
-    parser.add_argument("cmd", choices=['RUN', 'START', 'GET', 'STOP', 'PERIOD'], help='command for the eBPF device')
-    parser.add_argument("dest", nargs=2, help='eBPF device ip address')  # ebpf machine
-    parser.add_argument("-t", "--time", type=int, default=3, help='period of stat gathering [RUN]')
-    parser.add_argument("-s", "--server", nargs=2, help='monitoring server ip address and port')
+    parser.add_argument("cmd",
+                        choices=['RUN', 'START', 'GET', 'STOP', 'PERIOD'],
+                        help='command for the eBPF device'
+                        )
+    parser.add_argument("dest",
+                        nargs=2,
+                        help='eBPF device ip address'
+                        )  # ebpf machine
+    parser.add_argument("-t",
+                        "--time",
+                        type=int,
+                        default=3,
+                        help='period of stat gathering [RUN], [PERIOD]')
+    parser.add_argument("-i",
+                        "--interval",
+                        type=int, default=1,
+                        help='period interval between two stat gathering [PERIOD]')
+    parser.add_argument("-s",
+                        "--server",
+                        nargs=2,
+                        help='monitoring server ip address and port')
     args = parser.parse_args()
     logger.debug('PARSED: [%s]' % args)
     return args
@@ -32,9 +49,16 @@ def parse():
 def serialize_cmd(command):
     """Input command to JSON format"""
     if command.server:
-        return json.dumps({'cmd': command.cmd, 'time': command.time, 'server': command.server})
+        return json.dumps({'cmd': command.cmd,
+                           'time': command.time,
+                           'interval': command.interval,
+                           'server': command.server
+                           })
     else:
-        return json.dumps({'cmd': command.cmd, 'time': command.time})
+        return json.dumps({'cmd': command.cmd,
+                           'time': command.time,
+                           'interval': command.interval
+                           })
 
 
 def sign(plain_data):

@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 stats_global = 0
 running_global = 0
@@ -118,6 +118,20 @@ def cmd_stop(command):
     stop_ebpf()
 
 
+def cmd_period(init_address, command):
+    """PERIOD command process"""
+    logger.info('PERIOD')
+    start_ebpf()
+
+    future = time.time() + command['time']
+    while time.time() < future:
+        logger.info('Interval: %s sec' % command['interval'])
+        time.sleep(int(command['interval']))
+        send_stats(init_address, command)
+
+    stop_ebpf()
+
+
 def send_error(error_msg, address):
     """Send error to the indicated address"""
     logger.info('Error message sent to %s: %s' % (address[0], error_msg))
@@ -172,7 +186,7 @@ def main():
                 cmd = j['cmd']
                 if cmd == 'RUN' and not running_global:
                     cmd_run(init_address, j)
-                elif (cmd == 'START' or cmd == 'RUN') and running_global:
+                elif (cmd == 'START' or cmd == 'RUN' or cmd == 'PERIOD') and running_global:
                     logger.warning('Already running')
                 elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
                     logger.error('Must first start the stat gathering with cmd: START')
@@ -183,6 +197,8 @@ def main():
                     cmd_get(init_address, j)
                 elif cmd == 'STOP' and running_global:
                     cmd_stop(j)
+                elif cmd == 'PERIOD' and not running_global:
+                    cmd_period(init_address, j)
                 else:
                     logger.error('Wrong command')
                     print('ERROR: Wrong command')
