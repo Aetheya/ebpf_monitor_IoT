@@ -16,33 +16,36 @@ from cryptography.hazmat.primitives import hashes
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-stats_global = 0
 running_global = 0
-b = BPF(src_file="ebpf.c")
+b = BPF(src_file="ebpf_map_stat.c")
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 host_address = ('', 10000)
 
 
+def gather_stats():
+    stats_map = b["stats_map"]
+    stats_tab = [0] * 10
+    for k, v in stats_map.items():
+        stats_tab[int(k.value)] = v.value
+    return stats_tab
+
+
 def serialize_stats():
     """Gathered statistics to JSON format"""
-    global stats_global
-    serialized = json.dumps({"rcv_packets": stats_global.rcv_packets,
-                             "snt_packets": stats_global.snt_packets,
+    # stats_map = b["stats_map"]
+    # print(stats_map.items()[0][0].value)
+    # print(stats_map.items()[1].value)
+    stats_tab= gather_stats()
+
+    serialized = json.dumps({"rcv_packets": int(stats_tab[0]),
+                             "snt_packets": int(stats_tab[1]),
                              })
     return serialized
 
 
-def update_stats(cpu, data, size):
-    """Callback fun triggered when buffer_poll"""
-    global stats_global
-    event = b["events"].event(data)
-    stats_global = event
-
-
 def send_stats(initiator, command):
     """Sends statistics to server and ack to the initiator"""
-    b.perf_buffer_poll()
 
     json_stats = serialize_stats()
 
@@ -72,8 +75,6 @@ def start_ebpf():
 
     b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
     b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
-
-    b["events"].open_perf_buffer(update_stats)
 
 
 def stop_ebpf():
