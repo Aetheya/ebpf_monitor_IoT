@@ -6,7 +6,7 @@
 #include <uapi/linux/if_ether.h>
 #include <net/sock.h>
 
-BPF_ARRAY(stats_map,u64,256);
+BPF_ARRAY(stats_map, u8,256);
 BPF_ARRAY(proto_map, u8, 256);
 
 /*
@@ -18,34 +18,12 @@ stats_map[3]=tcp_rcv_packets
 
 int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
 
-    u8 protocol = 0;
-
-    int gso_max_segs_offset = offsetof(struct sock, sk_gso_max_segs);
-    int sk_lingertime_offset = offsetof(struct sock, sk_lingertime);
-    if (sk_lingertime_offset - gso_max_segs_offset == 4)
-        // 4.10+ with little endian
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        protocol = *(u8 *)((u64)&sk->sk_gso_max_segs - 3);
-    else
-        /// pre-4.10 with little endian
-        protocol = *(u8 *)((u64)&sk->sk_wmem_queued - 3);
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-        // 4.10+ with big endian
-        protocol = *(u8 *)((u64)&sk->sk_gso_max_segs - 1);
-    else
-        // pre-4.10 with big endian
-        protocol = *(u8 *)((u64)&sk->sk_wmem_queued - 1);
-#else
-# error "Fix your compiler's __BYTE_ORDER__?!"
-#endif
-    proto_map.increment(protocol);
-
-    u64 key= 0;
+    u8 key= 0;
     stats_map.increment(key);
     return 0;
 }
 
-int detect_snt_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
     u8 protocol = 0;
 
     int gso_max_segs_offset = offsetof(struct sock, sk_gso_max_segs);
@@ -67,8 +45,19 @@ int detect_snt_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
 # error "Fix your compiler's __BYTE_ORDER__?!"
 #endif
     proto_map.increment(protocol);
+    return 0;
+}
 
-    u64 key= 1;
+int detect_arp(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+    u8 key= 2;
+    stats_map.increment(key);
+    return 0;
+}
+
+
+int detect_snt_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+
+    u8 key= 1;
     stats_map.increment(key);
     return 0;
 }

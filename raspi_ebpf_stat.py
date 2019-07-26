@@ -29,7 +29,7 @@ def serialize_stats():
                              "tcp_packets": b["proto_map"][socket.IPPROTO_TCP].value,
                              "udp_packets": b["proto_map"][socket.IPPROTO_UDP].value,
                              "icmp_packets": b["proto_map"][socket.IPPROTO_ICMP].value,
-
+                             "arp_packets": b["stats_map"][2].value,
                              })
     return serialized
 
@@ -64,7 +64,11 @@ def start_ebpf():
     running_global = 1
 
     b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
+    b.attach_kprobe(event="ip_rcv", fn_name="detect_protocol")
     b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
+    b.attach_kprobe(event="ip_output", fn_name="detect_protocol")
+    b.attach_kprobe(event="arp_rcv", fn_name="detect_arp")
+    b.attach_kprobe(event="arp_send", fn_name="detect_arp")
 
 
 def stop_ebpf():
@@ -74,6 +78,8 @@ def stop_ebpf():
 
     b.detach_kprobe("ip_rcv")
     b.detach_kprobe("ip_output")
+    b.detach_kprobe("arp_rcv")
+    b.detach_kprobe("arp_send")
 
     b["stats_map"].clear()
     b["proto_map"].clear()

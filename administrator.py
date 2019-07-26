@@ -12,8 +12,6 @@ from cryptography.hazmat.primitives import hashes
 # TODO nargs
 admin_address = ('', 10001)
 logger = logging.getLogger(__name__)
-
-
 # logging.basicConfig(level=logging.INFO)
 
 
