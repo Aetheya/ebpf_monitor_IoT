@@ -9,7 +9,7 @@
 
 BPF_HASH(stats_map,u64);
 
-BPF_ARRAY(proto_map, u64, 256);
+BPF_ARRAY(proto_map, u8, 256);
 //BPF_HASH(proto_map,u64);
 /*
 stats_map[0]=rcv_packets

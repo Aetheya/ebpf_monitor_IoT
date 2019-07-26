@@ -40,6 +40,7 @@ def gather_proto():
 
 
 def proti():
+    print('protos',socket.IPPROTO_TCP,socket.IPPROTO_UDP,socket.IPPROTO_ICMP)
     print("TCP: {0}, UDP: {1}, ICMP: {2}".format(
         b["proto_map"][socket.IPPROTO_TCP].value,
         b["proto_map"][socket.IPPROTO_UDP].value,
