@@ -99,7 +99,7 @@ def start_ebpf():
     b.attach_kprobe(event="ip_output", fn_name="detect_dport")
     b.attach_kprobe(event="ip_output", fn_name="detect_family")
     b.attach_kprobe(event="ip_rcv", fn_name="detect_family")
-    b.attach_kprobe(event="tcp_retransmit_timer", fn_name="detect_lost_pkts")
+    b.attach_kprobe(event="tcp_fastretrans_alert", fn_name="detect_lost_pkts")
 
 
 def stop_ebpf():
