@@ -32,26 +32,28 @@ int detect_protocol(struct __sk_buff *skb){
 int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
 
     u8 protocol = 0;
-    struct sock *newsk = (struct sock *)PT_REGS_RC(ctx);
+    //struct sock *newsk = (struct sock *)PT_REGS_RC(ctx);µ
+        struct sock *newsk = sk;
+
 
     int gso_max_segs_offset = offsetof(struct sock, sk_gso_max_segs);
     int sk_lingertime_offset = offsetof(struct sock, sk_lingertime);
-    //if (sk_lingertime_offset - gso_max_segs_offset == 4)
+    if (sk_lingertime_offset - gso_max_segs_offset == 4)
         // 4.10+ with little endian
-//#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-       // protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 3);
-  //  else
-        // pre-4.10 with little endian
-      //  protocol = *(u8 *)((u64)&newsk->sk_wmem_queued - 3);
-//#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 3);
+    else
+        /// pre-4.10 with little endian -> renvoie 0 tt ltemps
+        protocol = *(u8 *)((u64)&newsk->sk_wmem_queued - 3);
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
         // 4.10+ with big endian
-        //protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 1);
-  //  else
-        // pre-4.10 with big endian
+        protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 1);
+    else
+        // pre-4.10 with big endian -> renvoie 0 tt ltemps
         protocol = *(u8 *)((u64)&newsk->sk_wmem_queued - 1);
-//#else
-//# error "Fix your compiler's __BYTE_ORDER__?!"
-//#endif
+#else
+# error "Fix your compiler's __BYTE_ORDER__?!"
+#endif
     proto_map.increment(protocol);
     u8 key2 = 7;
 
