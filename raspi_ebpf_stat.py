@@ -12,7 +12,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -22,6 +21,24 @@ b = BPF(src_file="ebpf_map_stat.c")
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 host_address = ('', 10000)
 
+
+def gather_data():
+    data_map = b["ports_map"]
+    for k, v in data_map.items():
+        if v.value != 0:
+            print(k.value, v.value)
+    return 0
+
+
+def port_map_to_list():
+    data_map = b["ports_map"]
+    port_list = []
+    for k, v in data_map.items():
+        if v.value != 0:
+            port_list.append(k.value)
+    return port_list
+
+
 def serialize_stats():
     """Gathered statistics to JSON format"""
     serialized = json.dumps({"rcv_packets": b["stats_map"][0].value,
@@ -30,6 +47,7 @@ def serialize_stats():
                              "udp_packets": b["proto_map"][socket.IPPROTO_UDP].value,
                              "icmp_packets": b["proto_map"][socket.IPPROTO_ICMP].value,
                              "arp_packets": b["stats_map"][2].value,
+                             "snd_ports": port_map_to_list(),
                              })
     return serialized
 
@@ -69,6 +87,7 @@ def start_ebpf():
     b.attach_kprobe(event="ip_output", fn_name="detect_protocol")
     b.attach_kprobe(event="arp_rcv", fn_name="detect_arp")
     b.attach_kprobe(event="arp_send", fn_name="detect_arp")
+    b.attach_kprobe(event="ip_output", fn_name="detect_dport")
 
 
 def stop_ebpf():

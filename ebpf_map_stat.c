@@ -8,6 +8,7 @@
 
 BPF_ARRAY(stats_map, u8,256);
 BPF_ARRAY(proto_map, u8, 256);
+BPF_ARRAY(ports_map, u16, 65536);
 
 /*
 stats_map[0]=rcv_packets
@@ -60,4 +61,23 @@ int detect_snt_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
     u8 key= 1;
     stats_map.increment(key);
     return 0;
+}
+
+int detect_dport(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+
+    u16 dport = 0;
+    dport = sk->__sk_common.skc_dport;
+    dport = ntohs(dport);
+    ports_map.increment(dport);
+    return 0;
+
+}
+
+int detect_lport(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+
+    u16 lport = 0;
+    lport = sk->__sk_common.skc_num;
+    ports_map.increment(lport);
+    return 0;
+
 }
