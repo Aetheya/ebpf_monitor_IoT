@@ -1,5 +1,4 @@
-#!/usr/bin/python
-
+#!/bin/env python3
 from bcc import BPF
 import socket
 import time
@@ -13,6 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
+# !/usr/bin/python
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -31,15 +31,28 @@ def gather_stats():
     return stats_tab
 
 
+def gather_proto():
+    proto_map = b["proto_map"]
+    for k, v in proto_map.items():
+        if v.value != 0:
+            print(k.value, v.value)
+    return 0
+
+
+def proti():
+    print("TCP: {0}, UDP: {1}, ICMP: {2}".format(
+        b["proto_map"][socket.IPPROTO_TCP].value,
+        b["proto_map"][socket.IPPROTO_UDP].value,
+        b["proto_map"][socket.IPPROTO_ICMP].value
+    ))
+
+
 def serialize_stats():
     """Gathered statistics to JSON format"""
-    # stats_map = b["stats_map"]
-    # print(stats_map.items()[0][0].value)
-    # print(stats_map.items()[1].value)
-    stats_tab= gather_stats()
-
-    serialized = json.dumps({"rcv_packets": int(stats_tab[0]),
-                             "snt_packets": int(stats_tab[1]),
+    stats_tab = gather_stats()
+    gather_proto()
+    serialized = json.dumps({"rcv_packets": stats_tab[0],
+                             "snt_packets": stats_tab[1],
                              })
     return serialized
 
@@ -73,6 +86,9 @@ def start_ebpf():
     global running_global
     running_global = 1
 
+    # ffilter = b.load_func("detect_protocol", BPF.SOCKET_FILTER)
+    # BPF.attach_raw_socket(ffilter, "wlp3s0")
+
     b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
     b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
 
@@ -86,6 +102,7 @@ def stop_ebpf():
     b.detach_kprobe("ip_output")
 
     b["stats_map"].clear()
+    b["proto_map"].clear()
 
 
 def cmd_run(init_address, command):
