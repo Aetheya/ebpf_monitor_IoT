@@ -9,8 +9,8 @@
 
 BPF_HASH(stats_map,u64);
 
-//BPF_ARRAY(proto_map, u8, 256);
-BPF_HASH(proto_map,u8);
+BPF_ARRAY(proto_map, u8, 256);
+//BPF_HASH(proto_map,u8);
 /*
 stats_map[0]=rcv_packets
 stats_map[1]=snt_packets
@@ -52,8 +52,10 @@ int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
 #else
 # error "Fix your compiler's __BYTE_ORDER__?!"
 #endif
-
     proto_map.increment(protocol);
+    u8 key2 = 7;
+
+    if (protocol == IPPROTO_TCP) { proto_map.increment(key2);}
 
     u64 key= 0;
     stats_map.increment(key);
