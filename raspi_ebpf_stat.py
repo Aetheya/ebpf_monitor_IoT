@@ -51,6 +51,7 @@ def serialize_stats():
                              "ipv4_packets": b["stats_map"][3].value,
                              "ipv6_packets": b["stats_map"][4].value,
                              "lost_packets": b["stats_map"][5].value,
+                             "dupl_packets": b["stats_map"][6].value,
                              })
     return serialized
 
@@ -99,7 +100,9 @@ def start_ebpf():
     b.attach_kprobe(event="ip_output", fn_name="detect_dport")
     b.attach_kprobe(event="ip_output", fn_name="detect_family")
     b.attach_kprobe(event="ip_rcv", fn_name="detect_family")
-    b.attach_kprobe(event="tcp_retransmit_skb", fn_name="detect_lost_pkts")
+    b.attach_kprobe(event="tcp_retransmit_skb", fn_name="detect_retrans_pkts")
+    b.attach_kprobe(event="tcp_validate_incoming", fn_name="detect_dupl_pkts")
+
 
 
 def stop_ebpf():

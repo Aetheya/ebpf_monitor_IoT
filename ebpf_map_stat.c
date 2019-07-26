@@ -87,8 +87,15 @@ int detect_family(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
     return 0;
 }
 
-int detect_lost_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+int detect_retrans_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
     u8 key= 5;
     stats_map.increment(key);
     return 0;
 }
+
+int detect_dupl_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+    u8 key= 6;
+    stats_map.increment(key);
+    return 0;
+}
+
