@@ -64,7 +64,7 @@ int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
     return 0;
 }
 
-int detect_snt_pkts(struct pt_regs *ctx, struct sk_buff *skb){
+int detect_snt_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
 u8 protocol = 0;
     //struct sock *newsk = (struct sock *)PT_REGS_RC(ctx);µ
         struct sock *newsk = sk;
