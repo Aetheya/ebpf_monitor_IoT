@@ -50,8 +50,15 @@ def serialize_stats():
                              "snd_ports": port_map_to_list(),
                              "ipv4_packets": b["stats_map"][3].value,
                              "ipv6_packets": b["stats_map"][4].value,
+                             "lost_packets": b["stats_map"][5].value,
                              })
     return serialized
+
+
+def send_error(error_msg, address):
+    """Send error to the indicated address"""
+    logger.info('Error message sent to %s: %s' % (address[0], error_msg))
+    sock.sendto(error_msg, address)
 
 
 def send_stats(initiator, command):
@@ -92,6 +99,7 @@ def start_ebpf():
     b.attach_kprobe(event="ip_output", fn_name="detect_dport")
     b.attach_kprobe(event="ip_output", fn_name="detect_family")
     b.attach_kprobe(event="ip_rcv", fn_name="detect_family")
+    b.attach_kprobe(event="tcp_retransmit_timer", fn_name="detect_lost_pkts")
 
 
 def stop_ebpf():
@@ -151,12 +159,6 @@ def cmd_period(init_address, command):
         send_stats(init_address, command)
 
     stop_ebpf()
-
-
-def send_error(error_msg, address):
-    """Send error to the indicated address"""
-    logger.info('Error message sent to %s: %s' % (address[0], error_msg))
-    sock.sendto(error_msg, address)
 
 
 def verify_signature(signed_data):

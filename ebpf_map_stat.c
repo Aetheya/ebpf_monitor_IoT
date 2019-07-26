@@ -13,8 +13,13 @@ BPF_ARRAY(ports_map, u16, 65536);
 /*
 stats_map[0]=rcv_packets
 stats_map[1]=snt_packets
-stats_map[2]=udp_rcv_packets
-stats_map[3]=tcp_rcv_packets
+stats_map[2]=arp_packets
+stats_map[3]=ipv4_packets
+stats_map[4]=ipv6_packets
+
+proto_map[x]=y x= protocol number
+ports_map[x]=y x= port number
+
 */
 
 int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
@@ -79,5 +84,12 @@ int detect_family(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
     u16 family = sk->__sk_common.skc_family;
     if (family == AF_INET) stats_map.increment(key_ipv4);
     else if (family == AF_INET6) stats_map.increment(key_ipv6);
+    return 0;
+}
+
+int detect_lost_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+
+    u8 key= 5;
+    stats_map.increment(key);
     return 0;
 }
