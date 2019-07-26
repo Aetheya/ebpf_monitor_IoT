@@ -1,16 +1,14 @@
 #include <linux/skbuff.h>
 #include <uapi/linux/ip.h>
 
-#include <uapi/linux/ip.h> // struct iphdr
-#include <linux/types.h> //eth_head
+#include <uapi/linux/ip.h>
+#include <linux/types.h>
 #include <uapi/linux/if_ether.h>
-//#include <net/sock.h>
 #include <net/sock.h>
 
-//BPF_HASH(stats_map,u64);
 BPF_ARRAY(stats_map,u64,256);
 BPF_ARRAY(proto_map, u8, 256);
-//BPF_HASH(proto_map,u8);
+
 /*
 stats_map[0]=rcv_packets
 stats_map[1]=snt_packets
