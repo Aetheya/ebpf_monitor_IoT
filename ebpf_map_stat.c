@@ -42,10 +42,10 @@ int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
        // protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 3);
   //  else
         // pre-4.10 with little endian
-        protocol = *(u8 *)((u64)&newsk->sk_wmem_queued - 3);
+      //  protocol = *(u8 *)((u64)&newsk->sk_wmem_queued - 3);
 //#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
         // 4.10+ with big endian
-      //  protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 1);
+        protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 1);
   //  else
         // pre-4.10 with big endian
       //  protocol = *(u8 *)((u64)&newsk->sk_wmem_queued - 1);
