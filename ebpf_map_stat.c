@@ -36,7 +36,7 @@ int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
 
     int gso_max_segs_offset = offsetof(struct sock, sk_gso_max_segs);
     int sk_lingertime_offset = offsetof(struct sock, sk_lingertime);
-    if (sk_lingertime_offset - gso_max_segs_offset == 4)
+    //if (sk_lingertime_offset - gso_max_segs_offset == 4)
         // 4.10+ with little endian
 //#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
        // protocol = *(u8 *)((u64)&newsk->sk_gso_max_segs - 3);
