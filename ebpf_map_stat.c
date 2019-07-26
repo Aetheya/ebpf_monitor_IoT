@@ -9,15 +9,15 @@
 
 BPF_HASH(stats_map,u64);
 
-BPF_ARRAY(proto_map, u8, 256);
-//BPF_HASH(proto_map,u64);
+//BPF_ARRAY(proto_map, u8, 256);
+BPF_HASH(proto_map,u8);
 /*
 stats_map[0]=rcv_packets
 stats_map[1]=snt_packets
 stats_map[2]=udp_rcv_packets
 stats_map[3]=tcp_rcv_packets
 */
-
+/*
 int detect_protocol(struct __sk_buff *skb){
 
    int key1 = load_byte(skb, ETH_HLEN + offsetof(struct iphdr, protocol));
@@ -26,7 +26,7 @@ int detect_protocol(struct __sk_buff *skb){
     if (value)
 	    proto_map.increment(key1);
     return 0;
-}
+}*/
 
 int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
 
