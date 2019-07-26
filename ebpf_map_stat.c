@@ -22,7 +22,7 @@ int detect_protocol(struct __sk_buff *skb){
 
    int key1 = load_byte(skb, ETH_HLEN + offsetof(struct iphdr, protocol));
 
-    u64 *value = proto_map.lookup(&key1);
+    u8 *value = proto_map.lookup(&key1);
     if (value)
 	    proto_map.increment(key1);
     return 0;
