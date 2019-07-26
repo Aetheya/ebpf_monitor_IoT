@@ -1,4 +1,4 @@
-#!/bin/env python3
+# !/usr/bin/python
 from bcc import BPF
 import socket
 import time
@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
-# !/usr/bin/python
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -22,39 +22,14 @@ b = BPF(src_file="ebpf_map_stat.c")
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 host_address = ('', 10000)
 
-
-def gather_stats():
-    stats_map = b["stats_map"]
-    stats_tab = [0] * 10
-    for k, v in stats_map.items():
-        stats_tab[int(k.value)] = v.value
-    return stats_tab
-
-
-def gather_proto():
-    proto_map = b["proto_map"]
-    for k, v in proto_map.items():
-        if v.value != 0:
-            print(k.value, v.value)
-    return 0
-
-
-def proti():
-    print('protos',socket.IPPROTO_TCP,socket.IPPROTO_UDP,socket.IPPROTO_ICMP)
-    print("TCP: {0}, UDP: {1}, ICMP: {2}".format(
-        b["proto_map"][socket.IPPROTO_TCP].value,
-        b["proto_map"][socket.IPPROTO_UDP].value,
-        b["proto_map"][socket.IPPROTO_ICMP].value
-    ))
-
-
 def serialize_stats():
     """Gathered statistics to JSON format"""
-    stats_tab = gather_stats()
-    gather_proto()
-    proti()
-    serialized = json.dumps({"rcv_packets": stats_tab[0],
-                             "snt_packets": stats_tab[1],
+    serialized = json.dumps({"rcv_packets": b["stats_map"][0].value,
+                             "snt_packets": b["stats_map"][1].value,
+                             "tcp_packets": b["proto_map"][socket.IPPROTO_TCP].value,
+                             "udp_packets": b["proto_map"][socket.IPPROTO_UDP].value,
+                             "icmp_packets": b["proto_map"][socket.IPPROTO_ICMP].value,
+
                              })
     return serialized
 
@@ -87,9 +62,6 @@ def start_ebpf():
     """Start eBPF statistic gathering"""
     global running_global
     running_global = 1
-
-    # ffilter = b.load_func("detect_protocol", BPF.SOCKET_FILTER)
-    # BPF.attach_raw_socket(ffilter, "wlp3s0")
 
     b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
     b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
