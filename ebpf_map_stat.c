@@ -43,7 +43,7 @@ int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
         // pre-4.10 with big endian
         protocol = *(u8 *)((u64)&sk->sk_wmem_queued - 1);
 #else
-# error "Fix your compiler's __BYTE_ORDER__?!"
+# error "Fix your compiler's __BYTE_ORDER__"
 #endif
     proto_map.increment(protocol);
     return 0;
@@ -73,11 +73,11 @@ int detect_dport(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
 
 }
 
-int detect_lport(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
-
-    u16 lport = 0;
-    lport = sk->__sk_common.skc_num;
-    ports_map.increment(lport);
+int detect_family(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+    u8 key_ipv4= 3;
+    u8 key_ipv6= 4;
+    u16 family = sk->__sk_common.skc_family;
+    if (family == AF_INET) stats_map.increment(key_ipv4);
+    else if (family == AF_INET6) stats_map.increment(key_ipv6);
     return 0;
-
 }
