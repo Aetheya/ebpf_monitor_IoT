@@ -51,6 +51,7 @@ def serialize_stats():
     """Gathered statistics to JSON format"""
     stats_tab = gather_stats()
     gather_proto()
+    proti()
     serialized = json.dumps({"rcv_packets": stats_tab[0],
                              "snt_packets": stats_tab[1],
                              })
