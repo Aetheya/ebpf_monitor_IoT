@@ -61,7 +61,7 @@ int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
 
     u8 key= 0;
     stats_map.increment(key);
-    process_loss(ctx)
+    process_loss(ctx);
     return 0;
 }
 
