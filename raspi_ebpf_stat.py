@@ -212,7 +212,7 @@ def cmd_thresh(init_address, command):
         lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
         # If last stats sent > 2 seconds ago
         logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
-        if lost_pkts/total_pkts > int(command['rate']) and time.time()-last_moment_sent >2:
+        if lost_pkts/total_pkts > float(command['rate']) and time.time()-last_moment_sent >2:
             logger.info('LOST rate:%f' %(lost_pkts/total_pkts))
             time.sleep(int(command['interval']))
             send_stats(init_address, command)

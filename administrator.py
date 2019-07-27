@@ -41,7 +41,7 @@ def parse():
                         help='monitoring server ip address and port')
     parser.add_argument("-r",
                         "--rate",
-                        type=int,
+                        type=float,
                         default=20,
                         help='max rate of loss accepted (pkt_lost>pkt_tot/rate')
     args = parser.parse_args()
