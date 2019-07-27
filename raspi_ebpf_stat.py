@@ -191,6 +191,7 @@ def cmd_thresh(init_address, command):
 
     future = time.time() + command['time']
     while time.time() < future:
+        logger.info('start')
         b.perf_buffer_poll()
         logger.info('Current stats:', parse_losing_rate())
         total_pkts =losing_rate_global.rcv_packets + losing_rate_global.snt_packets
