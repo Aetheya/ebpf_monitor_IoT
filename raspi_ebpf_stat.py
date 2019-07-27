@@ -31,6 +31,7 @@ def gather_data():
             print(k.value, v.value)
     return 0
 
+
 def serialize_stats():
     """Gathered statistics to JSON format"""
 
@@ -57,6 +58,7 @@ def port_map_to_list():
             port_list.append(k.value)
     return port_list
 
+
 def send_error(error_msg, address):
     """Send error to the indicated address"""
     logger.info('Error message sent to %s: %s' % (address[0], error_msg))
@@ -64,7 +66,7 @@ def send_error(error_msg, address):
 
 
 def random_wait():
-    time.sleep(random.uniform(0, 101) / 100)# Between 0 and 1 seconds
+    time.sleep(random.uniform(0, 101) / 100)  # Between 0 and 1 seconds
 
 
 def send_stats(initiator, command):
@@ -94,7 +96,13 @@ def send_stats(initiator, command):
         sock.sendto(json_stats, stat_dst)
         logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
         print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
+        clean_maps()
 
+
+def clean_maps():
+    b["stats_map"].clear()
+    b["proto_map"].clear()
+    b["ports_map"].clear()
 
 def start_ebpf():
     """Start eBPF statistic gathering"""
@@ -126,9 +134,7 @@ def stop_ebpf():
     b.detach_kprobe("tcp_retransmit_skb")
     b.detach_kprobe("tcp_validate_incoming")
 
-    b["stats_map"].clear()
-    b["proto_map"].clear()
-    b["ports_map"].clear()
+    clean_maps()
 
 
 def cmd_run(init_address, command):
@@ -175,38 +181,49 @@ def cmd_period(init_address, command):
 
     stop_ebpf()
 
+
 def parse_losing_rate():
     global losing_rate_global
-    return 'rcv : ',losing_rate_global.rcv_packets, 'snt : ', losing_rate_global.snt_packets, 'retrans : ',\
-           losing_rate_global.retrans_packets, 'dup : ', losing_rate_global.dup_packets
+    msg = 'rcv :%s, snd :%s, retrans :%s, dup :%s' % (
+    losing_rate_global.rcv_packets,
+    losing_rate_global.snt_packets,
+    losing_rate_global.retrans_packets,
+    losing_rate_global.dup_packets)
+    return msg
 
 
 def cmd_thresh(init_address, command):
     """THRESH command process"""
     global losing_rate_global
-    logger.info('THRESH')
+    logger.info('THRESH with rate: %s' ,command['rate'])
 
     start_ebpf()
     b["events"].open_perf_buffer(update_stats)
 
     future = time.time() + command['time']
+    last_moment_sent = time.time()
     while time.time() < future:
         logger.info('start')
         b.perf_buffer_poll()
-        logger.info('Current stats:', parse_losing_rate())
-        total_pkts =losing_rate_global.rcv_packets + losing_rate_global.snt_packets
+        logger.info('\n[%s]' % (parse_losing_rate()))
+        total_pkts = losing_rate_global.rcv_packets + losing_rate_global.snt_packets
         lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
-        if lost_pkts > (total_pkts / command['rate']):
+        # If last stats sent > 2 seconds ago
+        if lost_pkts > (total_pkts / int(command['rate'])) and time.time()-last_moment_sent >2:
+            logger.info('Loss rate:' )
             time.sleep(int(command['interval']))
             send_stats(init_address, command)
+            last_moment_sent = time.time()
     stop_ebpf()
+
 
 def update_stats(cpu, data, size):
     """Callback triggered when buffer_poll"""
     global losing_rate_global
-    logger.info('Updating stats')
+    logger.debug('Updating stats')
     event = b["events"].event(data)
     losing_rate_global = event
+
 
 def verify_signature(signed_data):
     """Verification of signature"""

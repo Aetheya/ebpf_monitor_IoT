@@ -9,7 +9,7 @@
 
 BPF_PERF_OUTPUT(events);
 
-BPF_ARRAY(stats_map, u8,256);
+BPF_ARRAY(stats_map, u64,256);
 BPF_ARRAY(proto_map, u8, 256);
 BPF_ARRAY(ports_map, u16, 65536);
 
@@ -33,18 +33,18 @@ struct losing_rate {
 };
 
 static int process_loss(struct pt_regs *ctx){
-
-struct losing_rate rate = {};
+    //bpf_trace_printk("processloss\n");
+    struct losing_rate rate = {};
     int rcv_packets_index = 0, snt_packets_index = 1,  retrans_packets_index=5, dup_packets_index=6;
-    u8 *rcv_packets_ptr, *snt_packets_ptr, *retrans_packets_ptr, *dup_packets_ptr;
+    u64 *rcv_packets_ptr, *snt_packets_ptr, *retrans_packets_ptr, *dup_packets_ptr, zero=0 ;
+
+        rcv_packets_ptr = stats_map.lookup_or_init(&rcv_packets_index,&zero);
+        snt_packets_ptr = stats_map.lookup_or_init(&snt_packets_index,&zero);
+        retrans_packets_ptr = stats_map.lookup_or_init(&retrans_packets_index,&zero);
+        dup_packets_ptr = stats_map.lookup_or_init(&dup_packets_index,&zero);
 
     if(rcv_packets_ptr != 0 && snt_packets_ptr != 0 && retrans_packets_ptr !=0 && dup_packets_ptr !=0){
-        rcv_packets_ptr = stats_map.lookup(&rcv_packets_index);
-        snt_packets_ptr = stats_map.lookup(&snt_packets_index);
-        retrans_packets_ptr = stats_map.lookup(&retrans_packets_index);
-        dup_packets_ptr = stats_map.lookup(&dup_packets_index);
-
-
+        //bpf_trace_printk("boucle1\n");
         rate.rcv_packets = *rcv_packets_ptr;
         rate.snt_packets = *snt_packets_ptr;
         rate.retrans_packets =*retrans_packets_ptr;
