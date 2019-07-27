@@ -55,12 +55,14 @@ def serialize_cmd(command):
         return json.dumps({'cmd': command.cmd,
                            'time': command.time,
                            'interval': command.interval,
-                           'server': command.server
+                           'server': command.server,
+                           'rate': command.rate,
                            })
     else:
         return json.dumps({'cmd': command.cmd,
                            'time': command.time,
-                           'interval': command.interval
+                           'interval': command.interval,
+                           'rate': command.rate
                            })
 
 

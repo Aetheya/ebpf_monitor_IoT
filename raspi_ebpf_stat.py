@@ -204,6 +204,7 @@ def cmd_thresh(init_address, command):
 def update_stats(cpu, data, size):
     """Callback triggered when buffer_poll"""
     global losing_rate_global
+    logger.info('Updating stats')
     event = b["events"].event(data)
     losing_rate_global = event
 
