@@ -6,6 +6,9 @@
 #include <uapi/linux/if_ether.h>
 #include <net/sock.h>
 
+
+BPF_PERF_OUTPUT(events);
+
 BPF_ARRAY(stats_map, u8,256);
 BPF_ARRAY(proto_map, u8, 256);
 BPF_ARRAY(ports_map, u16, 65536);
@@ -22,10 +25,43 @@ ports_map[x]=y x= port number
 
 */
 
+struct losing_rate {
+    u64 rcv_packets;
+    u64 snt_packets;
+    u64 retrans_packets;
+    u64 dup_packets;
+};
+
+static int process_loss(struct pt_regs *ctx){
+
+struct losing_rate rate = {};
+    int rcv_packets_index = 0, snt_packets_index = 1,  retrans_packets_index=5, dup_packets_index=6;
+    u8 *rcv_packets_ptr, *snt_packets_ptr, *retrans_packets_ptr, *dup_packets_ptr;
+
+    if(rcv_packets_ptr != 0 && snt_packets_ptr != 0 && retrans_packets_ptr !=0 && dup_packets_ptr !=0){
+        rcv_packets_ptr = stats_map.lookup(&rcv_packets_index);
+        snt_packets_ptr = stats_map.lookup(&snt_packets_index);
+        retrans_packets_ptr = stats_map.lookup(&retrans_packets_index);
+        dup_packets_ptr = stats_map.lookup(&dup_packets_index);
+
+
+        rate.rcv_packets = *rcv_packets_ptr;
+        rate.snt_packets = *snt_packets_ptr;
+        rate.retrans_packets =*retrans_packets_ptr;
+        rate.dup_packets = *dup_packets_ptr;
+
+        events.perf_submit(ctx, &rate, sizeof(rate));
+
+    }
+        return 0;
+}
+
+
 int detect_rcv_pkts(struct pt_regs *ctx,struct sk_buff *skb,struct sock *sk){
 
     u8 key= 0;
     stats_map.increment(key);
+
     return 0;
 }
 
@@ -90,12 +126,18 @@ int detect_family(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
 int detect_retrans_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
     u8 key= 5;
     stats_map.increment(key);
+
+    process_loss(ctx);
+
     return 0;
 }
 
 int detect_dupl_pkts(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
     u8 key= 6;
     stats_map.increment(key);
+
+    process_loss(ctx);
+
     return 0;
 }
 

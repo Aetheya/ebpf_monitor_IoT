@@ -6,6 +6,7 @@ Usage:
 - [A] administrator.py:
     - RUN [R_ip] [R_port] (-s [C]): Ack
     - START [R_ip] [R_port]
-    - GET [R_ip] [R_port] (-s [C]): Ack
-    - STOP [R_ip] [R_port]
+    - (running) GET [R_ip] [R_port] (-s [C]): Ack
+    - (running) STOP [R_ip] [R_port]
     - PERIOD [R_ip] [R_port] -s [C]
+    - (running) THRESH [R_ip] [R_port] -s [C] (-r rate)

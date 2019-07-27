@@ -4,6 +4,7 @@ import socket
 import time
 import json
 import logging
+import random
 
 import base64
 from cryptography.exceptions import InvalidSignature
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 running_global = 0
+losing_rate_global = 0
 b = BPF(src_file="ebpf_map_stat.c")
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -29,18 +31,9 @@ def gather_data():
             print(k.value, v.value)
     return 0
 
-
-def port_map_to_list():
-    data_map = b["ports_map"]
-    port_list = []
-    for k, v in data_map.items():
-        if v.value != 0:
-            port_list.append(k.value)
-    return port_list
-
-
 def serialize_stats():
     """Gathered statistics to JSON format"""
+
     serialized = json.dumps({"rcv_packets": b["stats_map"][0].value,
                              "snt_packets": b["stats_map"][1].value,
                              "tcp_packets": b["proto_map"][socket.IPPROTO_TCP].value,
@@ -50,11 +43,19 @@ def serialize_stats():
                              "snd_ports": port_map_to_list(),
                              "ipv4_packets": b["stats_map"][3].value,
                              "ipv6_packets": b["stats_map"][4].value,
-                             "lost_packets": b["stats_map"][5].value,
+                             "retrans_packets": b["stats_map"][5].value,
                              "dupl_packets": b["stats_map"][6].value,
                              })
     return serialized
 
+
+def port_map_to_list():
+    data_map = b["ports_map"]
+    port_list = []
+    for k, v in data_map.items():
+        if v.value != 0:
+            port_list.append(k.value)
+    return port_list
 
 def send_error(error_msg, address):
     """Send error to the indicated address"""
@@ -62,25 +63,34 @@ def send_error(error_msg, address):
     sock.sendto(error_msg, address)
 
 
+def random_wait():
+    time.sleep(random.uniform(0, 101) / 100)# Between 0 and 1 seconds
+
+
 def send_stats(initiator, command):
     """Sends statistics to server and ack to the initiator"""
 
     json_stats = serialize_stats()
+    logger.info('Gathered stats:%s' % json_stats)
 
     if 'server' in command:  # Send stats to server
         stat_dst = (command['server'][0], int(command['server'][1]))
         ack_dst = initiator
 
+        random_wait()
         sock.sendto(json_stats, stat_dst)
         logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
         print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
         ack_msg = 'ACK: Stats sent to: %s:%s' % (stat_dst[0], stat_dst[1])
+        random_wait()
         sock.sendto(ack_msg, ack_dst)
         logger.info('ACK to %s:%s' % (ack_dst[0], ack_dst[1]))
         print('ACK to %s:%s ' % (ack_dst[0], ack_dst[1]))
 
     else:  # Send stats to initiator
         stat_dst = initiator
+
+        random_wait()
         sock.sendto(json_stats, stat_dst)
         logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
         print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
@@ -104,7 +114,6 @@ def start_ebpf():
     b.attach_kprobe(event="tcp_validate_incoming", fn_name="detect_dupl_pkts")
 
 
-
 def stop_ebpf():
     """Stop eBPF statistic gathering"""
     global running_global
@@ -114,9 +123,12 @@ def stop_ebpf():
     b.detach_kprobe("ip_output")
     b.detach_kprobe("arp_rcv")
     b.detach_kprobe("arp_send")
+    b.detach_kprobe("tcp_retransmit_skb")
+    b.detach_kprobe("tcp_validate_incoming")
 
     b["stats_map"].clear()
     b["proto_map"].clear()
+    b["ports_map"].clear()
 
 
 def cmd_run(init_address, command):
@@ -163,6 +175,36 @@ def cmd_period(init_address, command):
 
     stop_ebpf()
 
+def parse_losing_rate():
+    global losing_rate_global
+    return 'rcv : ',losing_rate_global.rcv_packets, 'snt : ', losing_rate_global.snt_packets, 'retrans : ',\
+           losing_rate_global.retrans_packets, 'dup : ', losing_rate_global.dup_packets
+
+
+def cmd_thresh(init_address, command):
+    """THRESH command process"""
+    global losing_rate_global
+    logger.info('THRESH')
+
+    start_ebpf()
+    b["events"].open_perf_buffer(update_stats)
+
+    future = time.time() + command['time']
+    while time.time() < future:
+        b.perf_buffer_poll()
+        logger.info('Current stats:', parse_losing_rate())
+        total_pkts =losing_rate_global.rcv_packets + losing_rate_global.snt_packets
+        lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
+        if lost_pkts > (total_pkts / command['rate']):
+            time.sleep(int(command['interval']))
+            send_stats(init_address, command)
+    stop_ebpf()
+
+def update_stats(cpu, data, size):
+    """Callback triggered when buffer_poll"""
+    global losing_rate_global
+    event = b["events"].event(data)
+    losing_rate_global = event
 
 def verify_signature(signed_data):
     """Verification of signature"""
@@ -212,7 +254,7 @@ def main():
                 cmd = j['cmd']
                 if cmd == 'RUN' and not running_global:
                     cmd_run(init_address, j)
-                elif (cmd == 'START' or cmd == 'RUN' or cmd == 'PERIOD') and running_global:
+                elif (cmd == 'START' or cmd == 'RUN' or cmd == 'PERIOD', cmd == 'THRESH') and running_global:
                     logger.warning('Already running')
                 elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
                     logger.error('Must first start the stat gathering with cmd: START')
@@ -225,6 +267,8 @@ def main():
                     cmd_stop(j)
                 elif cmd == 'PERIOD' and not running_global:
                     cmd_period(init_address, j)
+                elif cmd == 'THRESH' and not running_global:
+                    cmd_thresh(init_address, j)
                 else:
                     logger.error('Wrong command')
                     print('ERROR: Wrong command')

@@ -19,7 +19,7 @@ def parse():
     """Parse user input command"""
     parser = argparse.ArgumentParser(description="Parser for cmd")
     parser.add_argument("cmd",
-                        choices=['RUN', 'START', 'GET', 'STOP', 'PERIOD'],
+                        choices=['RUN', 'START', 'GET', 'STOP', 'PERIOD', 'THRESH'],
                         help='command for the eBPF device'
                         )
     parser.add_argument("dest",
@@ -39,6 +39,11 @@ def parse():
                         "--server",
                         nargs=2,
                         help='monitoring server ip address and port')
+    parser.add_argument("-r",
+                        "--rate",
+                        type=int,
+                        default=20,
+                        help='max rate of loss accepted (pkt_lost>pkt_tot/rate')
     args = parser.parse_args()
     logger.debug('PARSED: [%s]' % args)
     return args
