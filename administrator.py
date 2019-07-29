@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives import hashes
 admin_address = ('', 10001)
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 
 
 def parse():
@@ -48,7 +48,7 @@ def parse():
                         default=0.015,
                         help='max rate of loss accepted (pkt_lost/pkt_tot>rate)')
     args = parser.parse_args()
-    logger.debug('PARSED: [%s]' % args)
+    logger.info('PARSED: [%s]' % args)
     return args
 
 

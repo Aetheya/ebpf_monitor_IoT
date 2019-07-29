@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 
 running_global = 0
 losing_rate_global = 0
@@ -107,7 +107,7 @@ def start_ebpf():
     b.attach_kprobe(event='arp_send', fn_name='detect_arp')
 
     # Ports
-    b.attach_kprobe(event='ip_output', fn_name='detect_dport')
+    #b.attach_kprobe(event='ip_output', fn_name='detect_dport')
     b.attach_kprobe(event='ip_rcv', fn_name='detect_lport')
 
     # IP family
