@@ -7,6 +7,7 @@ import json
 import logging
 import random
 
+
 import base64
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -19,12 +20,10 @@ logging.basicConfig(level=logging.INFO)
 
 running_global = 0
 losing_rate_global = 0
-init_connection_global=0
 b = BPF(src_file="ebpf_map_stat.c")
 
-sock_snd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock_admin = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock_admin_address = ('', 10000)
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+host_address = ('', 10000)
 
 
 def gather_data():
@@ -62,10 +61,10 @@ def port_map_to_list():
     return port_list
 
 
-def send_error(error_msg):
+def send_error(error_msg, address):
     """Send error to the indicated address"""
-    logger.info('Error message sent: %s' % (error_msg))
-    sock_snd.send(error_msg)
+    logger.info('Error message sent to %s: %s' % (address[0], error_msg))
+    sock.sendto(error_msg, address)
 
 
 def random_wait():
@@ -83,25 +82,22 @@ def send_stats(initiator, command):
         ack_dst = initiator
 
         random_wait()
-        sock_snd.connect(stat_dst)
-        sock_snd.send(json_stats)
-
+        sock.sendto(json_stats, stat_dst)
         logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
         print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
         ack_msg = 'ACK: Stats sent to: %s:%s' % (stat_dst[0], stat_dst[1])
-
         random_wait()
-        sock_snd.connect(ack_dst)
-        sock_snd.send(ack_msg)
+        sock.sendto(ack_msg, ack_dst)
         logger.info('ACK to %s:%s' % (ack_dst[0], ack_dst[1]))
         print('ACK to %s:%s ' % (ack_dst[0], ack_dst[1]))
 
     else:  # Send stats to initiator
-        random_wait()
-        sock_admin.send(json_stats)
+        stat_dst = initiator
 
-        logger.info('STATS to %s: \n%s' % (initiator[0], json_stats))
-        print('STATS to %s: \n%s\n' % (initiator[0], json_stats))
+        random_wait()
+        sock.sendto(json_stats, stat_dst)
+        logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
+        print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
         clean_maps()
 
 
@@ -109,7 +105,6 @@ def clean_maps():
     b["stats_map"].clear()
     b["proto_map"].clear()
     b["ports_map"].clear()
-
 
 def start_ebpf():
     """Start eBPF statistic gathering"""
@@ -192,17 +187,17 @@ def cmd_period(init_address, command):
 def parse_losing_rate():
     global losing_rate_global
     msg = 'rcv :%s, snd :%s, retrans :%s, dup :%s' % (
-        losing_rate_global.rcv_packets,
-        losing_rate_global.snt_packets,
-        losing_rate_global.retrans_packets,
-        losing_rate_global.dup_packets)
+    losing_rate_global.rcv_packets,
+    losing_rate_global.snt_packets,
+    losing_rate_global.retrans_packets,
+    losing_rate_global.dup_packets)
     return msg
 
 
 def cmd_thresh(init_address, command):
     """THRESH command process"""
     global losing_rate_global
-    logger.info('THRESH with rate: %s', command['rate'])
+    logger.info('THRESH with rate: %s' ,command['rate'])
 
     start_ebpf()
     b["events"].open_perf_buffer(update_stats)
@@ -210,14 +205,15 @@ def cmd_thresh(init_address, command):
     future = time.time() + command['time']
     last_moment_sent = time.time()
     while time.time() < future:
+        logger.info('start')
         b.perf_buffer_poll()
         logger.info('\n[%s]' % (parse_losing_rate()))
         total_pkts = losing_rate_global.rcv_packets + losing_rate_global.snt_packets
         lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
         # If last stats sent > 2 seconds ago
         logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
-        if lost_pkts / total_pkts > float(command['rate']) and time.time() - last_moment_sent > 2:
-            logger.info('LOST rate:%f' % (lost_pkts / total_pkts))
+        if lost_pkts/total_pkts > float(command['rate']) and time.time()-last_moment_sent >2:
+            logger.info('LOST rate:%f' %(lost_pkts/total_pkts))
             time.sleep(int(command['interval']))
             send_stats(init_address, command)
             last_moment_sent = time.time()
@@ -263,21 +259,16 @@ def verify_signature(signed_data):
 
 def main():
     try:
-        global init_connection_global
-
-        sock_admin.bind(sock_admin_address)
-        sock_admin.listen(0)
-        logger.info('Socket binded to (addr:[%s],port:[%s])' % sock_admin_address)
+        sock.bind(host_address)
+        logger.info('Socket binded to (addr:[%s],port:[%s])' % host_address)
         while True:
             print('Waiting to receive message...')
-            init_connection_global, init_address = sock_admin.accept()
-            data = init_connection_global.recv(4096)
-            if not data: break
+            data, init_address = sock.recvfrom(4096)
             logger.info('Message received')
 
             verified_data = verify_signature(data)
             if verified_data == -1:
-                send_error('Bad signature')
+                send_error('Bad signature', init_address)
             else:
                 j = json.loads(verified_data)
                 print('\nReceived message from %s:\n%s\n' % (init_address[0], verified_data))
@@ -289,7 +280,7 @@ def main():
                     logger.warning('Already running')
                 elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
                     logger.error('Must first start the stat gathering with cmd: START')
-                    send_error('ERROR: Must first start the stat gathering with cmd: START')
+                    send_error('ERROR: Must first start the stat gathering with cmd: START', init_address)
                 elif cmd == 'START' and not running_global:
                     cmd_start(j)
                 elif cmd == 'GET' and running_global:
@@ -306,8 +297,7 @@ def main():
 
     finally:
         logger.info('Closing socket')
-        sock_admin.close()
-        sock_snd.close()
+        sock.close()
 
 
 if __name__ == '__main__':

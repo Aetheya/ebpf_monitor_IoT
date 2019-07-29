@@ -9,9 +9,10 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
+# TODO nargs
 admin_address = ('', 10001)
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 
 
 def parse():
@@ -92,7 +93,7 @@ def sign(plain_data):
 
 
 def main():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     command = parse()
 
     dest_address = (command.dest[0], int(command.dest[1]))
@@ -101,24 +102,15 @@ def main():
     try:
 
         print('Sending message to host %s:%d\n%s' % (dest_address[0], dest_address[1], message))
-        #sock.bind(admin_address)
-
-        sock.connect(dest_address)
-        sock.send(sign(message))
-
-        #sock.sendto(sign(message), dest_address)
+        sock.bind(admin_address)
+        sock.sendto(sign(message), dest_address)
         logger.info('Message to %s on port %s' % dest_address)
 
         if command.cmd == 'RUN' or command.cmd == 'GET':
             print('Waiting an answer...\n')
-            #data, device = sock.recvfrom(4096)
-
-            #sock.bind(admin_address)
-            #sock.listen(0)
-            data = sock.recv(4096)
-
-            logger.info("Answer from %s: %s " % (dest_address[0], data))
-            print('Answer from %s:\n%s' % (dest_address[0], data))
+            data, device = sock.recvfrom(4096)
+            logger.info("Answer from %s: %s " % (device[0], data))
+            print('Answer from %s:\n%s' % (device[0], data))
 
         else:
             logger.info("CMD sent")
