@@ -32,22 +32,24 @@ struct losing_rate {
 
 static int process_loss(struct pt_regs *ctx){
 
-    struct losing_rate rate = {};
+    struct losing_rate rate = {};  // Object to be sent to userspace
     int rcv_packets_index = 0, snt_packets_index = 1,  retrans_packets_index=5, dup_packets_index=6;
     u64 *rcv_packets_ptr, *snt_packets_ptr, *retrans_packets_ptr, *dup_packets_ptr, zero=0 ;
 
+        /* Retrieve current stats linked to data loss */
         rcv_packets_ptr = stats_map.lookup_or_init(&rcv_packets_index,&zero);
         snt_packets_ptr = stats_map.lookup_or_init(&snt_packets_index,&zero);
         retrans_packets_ptr = stats_map.lookup_or_init(&retrans_packets_index,&zero);
         dup_packets_ptr = stats_map.lookup_or_init(&dup_packets_index,&zero);
 
     if(rcv_packets_ptr != 0 && snt_packets_ptr != 0 && retrans_packets_ptr !=0 && dup_packets_ptr !=0){
+        /* Fill object to be sent to userspace */
         rate.rcv_packets = *rcv_packets_ptr;
         rate.snt_packets = *snt_packets_ptr;
         rate.retrans_packets =*retrans_packets_ptr;
         rate.dup_packets = *dup_packets_ptr;
 
-        events.perf_submit(ctx, &rate, sizeof(rate));
+        events.perf_submit(ctx, &rate, sizeof(rate)); // Send data to userspace
     }
         return 0;
 }
@@ -73,7 +75,7 @@ int detect_snt_pkts(struct pt_regs *ctx){
     int snt_pkts_index = 1;
     u64 snt_packets_nb_inter = 0, *snt_packets_nb_ptr;
 
-    //Could also use stats_map.increment(rcv__pkts_index);
+    //Could also use stats_map.increment(snt__pkts_index);
     snt_packets_nb_ptr = stats_map.lookup(&snt_pkts_index);
 
     if(snt_packets_nb_ptr != 0){
