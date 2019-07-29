@@ -26,14 +26,6 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 host_address = ('', 10000)
 
 
-def gather_data():
-    data_map = b["ports_map"]
-    for k, v in data_map.items():
-        if v.value != 0:
-            print(k.value, v.value)
-    return 0
-
-
 def serialize_stats():
     """Gathered statistics to JSON format"""
     global start_time_global
@@ -55,6 +47,7 @@ def serialize_stats():
 
 
 def port_map_to_list():
+    """Gather ports numbers and make a list"""
     data_map = b["ports_map"]
     port_list = []
     for k, v in data_map.items():
