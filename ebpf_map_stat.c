@@ -1,7 +1,3 @@
-#include <linux/skbuff.h>
-#include <uapi/linux/ip.h>
-#include <uapi/linux/if_ether.h>
-#include <linux/types.h>
 #include <net/sock.h>
 
 BPF_PERF_OUTPUT(events);// Channel to userspace for events
