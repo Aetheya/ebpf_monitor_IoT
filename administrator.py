@@ -106,7 +106,8 @@ def main():
         sock.sendto(sign(message), dest_address)
         logger.info('Message to %s on port %s' % dest_address)
 
-        if command.cmd == 'RUN' or command.cmd == 'GET':
+        # Can receive one message
+        if not command.server and command.cmd in ['GET', 'RUN']:
             print('Waiting an answer...\n')
             data, device = sock.recvfrom(4096)
             logger.info("Answer from %s: %s " % (device[0], data))
