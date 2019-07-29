@@ -209,12 +209,15 @@ def cmd_thresh(init_address, command):
     while time.time() < future:
         start_time_global = time.time()
         b.perf_buffer_poll()  # Block until event happens
-        logger.info(parse_lost_data())
+        lost_data = parse_lost_data()
+        logger.info(lost_data)
 
         total_pkts = losing_rate_global.rcv_packets + losing_rate_global.snt_packets
         lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
         logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
         if ((lost_pkts / total_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
+            print('Loss rate:%f' % (lost_pkts / total_pkts))
+            print(lost_data)
             send_stats(init_address, command)
             last_moment_sent = time.time()
     stop_ebpf()

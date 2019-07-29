@@ -36,7 +36,7 @@ def parse():
                         help='period of stat gathering [RUN], [PERIOD], [THRESH]')
     parser.add_argument("-i",
                         "--interval",
-                        type=int, default=1,
+                        type=int, default=2,
                         help='period interval between two stat gathering [PERIOD]')
     parser.add_argument("-s",
                         "--server",
@@ -45,7 +45,7 @@ def parse():
     parser.add_argument("-r",
                         "--rate",
                         type=float,
-                        default=0.015,
+                        default=0.15,
                         help='max rate of loss accepted (pkt_lost/pkt_tot>rate)')
     args = parser.parse_args()
     logger.info('PARSED: [%s]' % args)
