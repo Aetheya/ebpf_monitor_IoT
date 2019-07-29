@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 
 running_global = 0
 losing_rate_global = 0
@@ -217,7 +217,6 @@ def cmd_thresh(init_address, command):
         logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
         if ((lost_pkts / total_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
             print('Loss rate:%f' % (lost_pkts / total_pkts))
-            print(lost_data)
             send_stats(init_address, command)
             last_moment_sent = time.time()
     stop_ebpf()
