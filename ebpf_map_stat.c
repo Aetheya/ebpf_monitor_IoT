@@ -97,9 +97,10 @@ int detect_lport(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
 
     u16 lport = -1;
     lport = sk->__sk_common.skc_num;
+    lport = ntohs(lport);
     ports_map.increment(lport);
     return 0;
-
+}
 
 int detect_protocol(struct pt_regs *ctx, struct sock *sk){
     u8 protocol = -1;//protocol number

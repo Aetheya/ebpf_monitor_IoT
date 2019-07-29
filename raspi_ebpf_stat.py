@@ -96,20 +96,25 @@ def start_ebpf():
     global running_global
     running_global = 1
 
+    # Packets
     b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
-    b.attach_kprobe(event="ip_rcv", fn_name="detect_protocol")
     b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
+
+    # Protocols
+    b.attach_kprobe(event="ip_rcv", fn_name="detect_protocol")
     b.attach_kprobe(event="ip_output", fn_name="detect_protocol")
     b.attach_kprobe(event="arp_rcv", fn_name="detect_arp")
     b.attach_kprobe(event="arp_send", fn_name="detect_arp")
 
+    # Ports
     b.attach_kprobe(event="ip_output", fn_name="detect_dport")
-    b.attach_kprobe(event="ip_rcv", fn_name="detect_dport")
     b.attach_kprobe(event="ip_rcv", fn_name="detect_lport")
-    b.attach_kprobe(event="ip_output", fn_name="detect_lport")
 
+    # IP family
     b.attach_kprobe(event="ip_output", fn_name="detect_family")
     b.attach_kprobe(event="ip_rcv", fn_name="detect_family")
+
+    # Loss
     b.attach_kprobe(event="tcp_retransmit_skb", fn_name="detect_retrans_pkts")
     b.attach_kprobe(event="tcp_validate_incoming", fn_name="detect_dupl_pkts")
 
