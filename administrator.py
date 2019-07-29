@@ -1,3 +1,6 @@
+"""
+Administrator interface to send commands to eBPF device
+"""
 import socket
 import argparse
 import json
@@ -9,8 +12,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
-# TODO nargs
 admin_address = ('', 10001)
+
 logger = logging.getLogger(__name__)
 # logging.basicConfig(level=logging.INFO)
 
@@ -29,8 +32,8 @@ def parse():
     parser.add_argument("-t",
                         "--time",
                         type=int,
-                        default=3,
-                        help='period of stat gathering [RUN], [PERIOD]')
+                        default=10,
+                        help='period of stat gathering [RUN], [PERIOD], [THRESH]')
     parser.add_argument("-i",
                         "--interval",
                         type=int, default=1,
@@ -38,12 +41,12 @@ def parse():
     parser.add_argument("-s",
                         "--server",
                         nargs=2,
-                        help='monitoring server ip address and port')
+                        help='monitoring server ip address and port [RUN] [GET] [PERIOD] [THRESH]')
     parser.add_argument("-r",
                         "--rate",
                         type=float,
-                        default=20,
-                        help='max rate of loss accepted (pkt_lost>pkt_tot/rate')
+                        default=0.015,
+                        help='max rate of loss accepted (pkt_lost/pkt_tot>rate)')
     args = parser.parse_args()
     logger.debug('PARSED: [%s]' % args)
     return args
@@ -51,19 +54,42 @@ def parse():
 
 def serialize_cmd(command):
     """Input command to JSON format"""
-    if command.server:
-        return json.dumps({'cmd': command.cmd,
-                           'time': command.time,
-                           'interval': command.interval,
-                           'server': command.server,
-                           'rate': command.rate,
+    if command.cmd == 'RUN':
+        if command.server:
+            return json.dumps({'cmd': command.cmd,
+                               'server': command.server,
+                               'time': command.time
+                               })
+        else:
+            return json.dumps({'cmd': command.cmd,
+                               'time': command.time
+                               })
+    elif command.cmd == 'START' or command.cmd == 'STOP':
+        return json.dumps({'cmd': command.cmd
                            })
-    else:
+    elif command.cmd == 'GET':
+        if command.server:
+            return json.dumps({'cmd': command.cmd,
+                               'server': command.server
+                               })
+        else:
+            return json.dumps({'cmd': command.cmd
+                               })
+    elif command.cmd == 'PERIOD' and command.server:
         return json.dumps({'cmd': command.cmd,
+                           'server': command.server,
                            'time': command.time,
-                           'interval': command.interval,
+                           'interval': command.interval
+                           })
+    elif command.cmd == 'THRESH' and command.server:
+        return json.dumps({'cmd': command.cmd,
+                           'server': command.server,
+                           'time': command.time,
                            'rate': command.rate
                            })
+    else:
+        logger.error("Malformed input")
+        return -1
 
 
 def sign(plain_data):
@@ -98,24 +124,26 @@ def main():
 
     dest_address = (command.dest[0], int(command.dest[1]))
     message = serialize_cmd(command)
-
+    if message == -1:
+        print('Malformed input')
+        return -1
     try:
 
         print('Sending message to host %s:%d\n%s' % (dest_address[0], dest_address[1], message))
         sock.bind(admin_address)
-        sock.sendto(sign(message), dest_address)
+        signed_message = sign(message)
+        if signed_message == -1:
+            print('Error while signing')
+            return -1
+        sock.sendto(signed_message, dest_address)
         logger.info('Message to %s on port %s' % dest_address)
 
-        # Can receive one message
+        # Receive one message
         if not command.server and command.cmd in ['GET', 'RUN']:
             print('Waiting an answer...\n')
             data, device = sock.recvfrom(4096)
             logger.info("Answer from %s: %s " % (device[0], data))
             print('Answer from %s:\n%s' % (device[0], data))
-
-        else:
-            logger.info("CMD sent")
-            print('CMD sent')
 
     finally:
         logger.info("Closing socket")

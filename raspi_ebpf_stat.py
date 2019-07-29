@@ -1,5 +1,4 @@
-# !/usr/bin/python
-from __future__ import division
+from __future__ import division  # Get float instead of int for div
 from bcc import BPF
 import socket
 import time
@@ -15,40 +14,40 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 
 running_global = 0
 losing_rate_global = 0
 start_time_global = 0
-b = BPF(src_file="ebpf_map_stat.c")
+b = BPF(src_file='ebpf_map_stat.c')
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 host_address = ('', 10000)
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
 def serialize_stats():
-    """Gathered statistics to JSON format"""
+    """Parse gathered statistics to JSON format"""
     global start_time_global
-    serialized = json.dumps({"start_time": start_time_global,
-                             "end_time": time.time(),
-                             "rcv_packets": b["stats_map"][0].value,
-                             "snt_packets": b["stats_map"][1].value,
-                             "tcp_packets": b["proto_map"][socket.IPPROTO_TCP].value,
-                             "udp_packets": b["proto_map"][socket.IPPROTO_UDP].value,
-                             "icmp_packets": b["proto_map"][socket.IPPROTO_ICMP].value,
-                             "arp_packets": b["stats_map"][2].value,
-                             "snd_ports": port_map_to_list(),
-                             "ipv4_packets": b["stats_map"][3].value,
-                             "ipv6_packets": b["stats_map"][4].value,
-                             "retrans_packets": b["stats_map"][5].value,
-                             "dupl_packets": b["stats_map"][6].value,
+    serialized = json.dumps({'time_start': start_time_global,
+                             'time_end': time.time(),
+                             'rcv_packets': b['stats_map'][0].value,
+                             'snt_packets': b['stats_map'][1].value,
+                             'tcp_packets': b['proto_map'][socket.IPPROTO_TCP].value,
+                             'udp_packets': b['proto_map'][socket.IPPROTO_UDP].value,
+                             'icmp_packets': b['proto_map'][socket.IPPROTO_ICMP].value,
+                             'arp_packets': b['stats_map'][2].value,
+                             'ports': port_map_to_list(),
+                             'ipv4_packets': b['stats_map'][3].value,
+                             'ipv6_packets': b['stats_map'][4].value,
+                             'retrans_packets': b['stats_map'][5].value,
+                             'dupl_packets': b['stats_map'][6].value,
                              })
     return serialized
 
 
 def port_map_to_list():
     """Gather ports numbers and make a list"""
-    data_map = b["ports_map"]
+    data_map = b['ports_map']
     port_list = []
     for k, v in data_map.items():
         if v.value != 0:
@@ -63,12 +62,13 @@ def send_error(error_msg, address):
 
 
 def random_wait():
-    time.sleep(random.uniform(0, 101) / 100)  # Between 0 and 1 seconds
+    """Wait for x seconds"""
+    val = random.uniform(0, 101) / 100  # Between 0 and 1 seconds
+    time.sleep(val)
 
 
 def send_stats(initiator, command):
     """Sends statistics to server and ack to the initiator"""
-
     json_stats = serialize_stats()
     logger.info('Gathered stats:%s' % json_stats)
 
@@ -77,18 +77,18 @@ def send_stats(initiator, command):
     else:  # Send stats to initiator
         stat_dst = initiator
 
-    random_wait()
+    random_wait()  # Avoid sync between eBPF devices
     sock.sendto(json_stats, stat_dst)
-    logger.info('STATS to %s: \n%s' % (stat_dst[0], json_stats))
-    print('STATS to %s: \n%s\n' % (stat_dst[0], json_stats))
+    logger.info('Stats sent to %s' % (stat_dst[0]))
+    print('Stats sent to %s' % (stat_dst[0]))
 
     clean_maps()
 
 
 def clean_maps():
-    b["stats_map"].clear()
-    b["proto_map"].clear()
-    b["ports_map"].clear()
+    b['stats_map'].clear()
+    b['proto_map'].clear()
+    b['ports_map'].clear()
 
 
 def start_ebpf():
@@ -97,26 +97,26 @@ def start_ebpf():
     running_global = 1
 
     # Packets
-    b.attach_kprobe(event="ip_rcv", fn_name="detect_rcv_pkts")
-    b.attach_kprobe(event="ip_output", fn_name="detect_snt_pkts")
+    b.attach_kprobe(event='ip_rcv', fn_name='detect_rcv_pkts')
+    b.attach_kprobe(event='ip_output', fn_name='detect_snt_pkts')
 
     # Protocols
-    b.attach_kprobe(event="ip_rcv", fn_name="detect_protocol")
-    b.attach_kprobe(event="ip_output", fn_name="detect_protocol")
-    b.attach_kprobe(event="arp_rcv", fn_name="detect_arp")
-    b.attach_kprobe(event="arp_send", fn_name="detect_arp")
+    b.attach_kprobe(event='ip_rcv', fn_name='detect_protocol')
+    b.attach_kprobe(event='ip_output', fn_name='detect_protocol')
+    b.attach_kprobe(event='arp_rcv', fn_name='detect_arp')
+    b.attach_kprobe(event='arp_send', fn_name='detect_arp')
 
     # Ports
-    b.attach_kprobe(event="ip_output", fn_name="detect_dport")
-    b.attach_kprobe(event="ip_rcv", fn_name="detect_lport")
+    b.attach_kprobe(event='ip_output', fn_name='detect_dport')
+    b.attach_kprobe(event='ip_rcv', fn_name='detect_lport')
 
     # IP family
-    b.attach_kprobe(event="ip_output", fn_name="detect_family")
-    b.attach_kprobe(event="ip_rcv", fn_name="detect_family")
+    b.attach_kprobe(event='ip_output', fn_name='detect_family')
+    b.attach_kprobe(event='ip_rcv', fn_name='detect_family')
 
     # Loss
-    b.attach_kprobe(event="tcp_retransmit_skb", fn_name="detect_retrans_pkts")
-    b.attach_kprobe(event="tcp_validate_incoming", fn_name="detect_dupl_pkts")
+    b.attach_kprobe(event='tcp_retransmit_skb', fn_name='detect_retrans_pkts')
+    b.attach_kprobe(event='tcp_validate_incoming', fn_name='detect_dupl_pkts')
 
 
 def stop_ebpf():
@@ -124,12 +124,12 @@ def stop_ebpf():
     global running_global
     running_global = 0
 
-    b.detach_kprobe("ip_rcv")
-    b.detach_kprobe("ip_output")
-    b.detach_kprobe("arp_rcv")
-    b.detach_kprobe("arp_send")
-    b.detach_kprobe("tcp_retransmit_skb")
-    b.detach_kprobe("tcp_validate_incoming")
+    b.detach_kprobe('ip_rcv')
+    b.detach_kprobe('ip_output')
+    b.detach_kprobe('arp_rcv')
+    b.detach_kprobe('arp_send')
+    b.detach_kprobe('tcp_retransmit_skb')
+    b.detach_kprobe('tcp_validate_incoming')
 
     clean_maps()
 
@@ -138,18 +138,16 @@ def cmd_run(init_address, command):
     """Run eBPF statistic gathering for x seconds"""
     global start_time_global
     logger.info('RUN for %s sec' % command['time'])
-
     start_ebpf()
-    future = time.time() + command['time']
-    start_time_global = time.time()
-    while time.time() < future:
-        time.sleep(0.01)
+
+    start_time_global = time.time()  # eBPF starting timestamp
+    time.sleep(command['time'])  # Period of stat gathering
 
     send_stats(init_address, command)
     stop_ebpf()
 
 
-def cmd_start(command):
+def cmd_start():
     """START command process"""
     global start_time_global
     logger.info('START')
@@ -165,7 +163,7 @@ def cmd_get(init_address, command):
     start_time_global = time.time()
 
 
-def cmd_stop(command):
+def cmd_stop():
     """STOP command process"""
     logger.info('STOP')
     stop_ebpf()
@@ -174,22 +172,22 @@ def cmd_stop(command):
 def cmd_period(init_address, command):
     """PERIOD command process"""
     global start_time_global
-    logger.info('PERIOD')
+    logger.info('PERIOD for %s sec, interval %s sec' % (command['time'], command['interval']))
     start_ebpf()
 
     future = time.time() + command['time']
-    while time.time() < future:
-        start_time_global = time.time()
-        logger.info('Interval: %s sec' % command['interval'])
-        time.sleep(int(command['interval']))
+    while time.time() < future:  # Total period of stats gathering
+        start_time_global = time.time()  # eBPF starting timestamp
+        time.sleep(command['interval'])  # Interval between two stats gathering
         send_stats(init_address, command)
 
     stop_ebpf()
 
 
-def parse_losing_rate():
+def parse_lost_data():
+    """Parse loss concerned data for logging"""
     global losing_rate_global
-    msg = 'rcv :%s, snd :%s, retrans :%s, dup :%s' % (
+    msg = '[rcv :%s, snd :%s, retrans :%s, dup :%s]' % (
         losing_rate_global.rcv_packets,
         losing_rate_global.snt_packets,
         losing_rate_global.retrans_packets,
@@ -200,24 +198,24 @@ def parse_losing_rate():
 def cmd_thresh(init_address, command):
     """THRESH command process"""
     global losing_rate_global, start_time_global
-    logger.info('THRESH with rate: %s', command['rate'])
+    logger.info('THRESH with rate: %s for %s sec' % (command['rate'], command['time']))
 
     start_ebpf()
-    b["events"].open_perf_buffer(update_stats)
+    b['events'].open_perf_buffer(update_stats)  # Opening channel for events from kernel
 
-    future = time.time() + command['time']
-    last_moment_sent = time.time()
+    future = time.time() + command['time']  # Period of stats gathering
+
+    send_interval = 2  # Slow start and min. interval between two sending
+    last_moment_sent = time.time()  # Last time data was sent
     while time.time() < future:
         start_time_global = time.time()
-        b.perf_buffer_poll()
-        logger.info('\n[%s]' % (parse_losing_rate()))
+        b.perf_buffer_poll()  # Block until event happens
+        logger.info(parse_lost_data())
+
         total_pkts = losing_rate_global.rcv_packets + losing_rate_global.snt_packets
         lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
-        # If last stats sent > 2 seconds ago
         logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
-        if lost_pkts / total_pkts > float(command['rate']) and time.time() - last_moment_sent > 2:
-            logger.info('LOST rate:%f' % (lost_pkts / total_pkts))
-            time.sleep(int(command['interval']))
+        if ((lost_pkts / total_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
             send_stats(init_address, command)
             last_moment_sent = time.time()
     stop_ebpf()
@@ -227,15 +225,14 @@ def update_stats(cpu, data, size):
     """Callback triggered when buffer_poll"""
     global losing_rate_global
     logger.debug('Updating stats')
-    event = b["events"].event(data)
-    losing_rate_global = event
+    losing_rate_global = b["events"].event(data)
 
 
 def verify_signature(signed_data):
     """Verification of signature"""
     data_tab = json.loads(signed_data)
     try:
-        with open('public_key.pem', 'rb') as key_file:
+        with open('public_key.pem', 'rb') as key_file:  # Public key file
             public_key = serialization.load_pem_public_key(
                 key_file.read(),
                 backend=default_backend()
@@ -253,7 +250,7 @@ def verify_signature(signed_data):
         logger.info('Verified host')
         return data_tab['message']
     except InvalidSignature:
-        logger.error('Wrong signature - Spoofing attempt')
+        logger.error('Wrong signature')
         return -1
     except ValueError:
         logger.error('Malformed signature')
@@ -265,7 +262,7 @@ def main():
         sock.bind(host_address)
         logger.info('Socket binded to (addr:[%s],port:[%s])' % host_address)
         while True:
-            print('Waiting to receive message...')
+            print('Waiting for message...')
             data, init_address = sock.recvfrom(4096)
             logger.info('Message received')
 
@@ -274,22 +271,31 @@ def main():
                 send_error('Bad signature', init_address)
             else:
                 j = json.loads(verified_data)
-                print('\nReceived message from %s:\n%s\n' % (init_address[0], verified_data))
+                print('\nMessage received from %s:\n%s\n' % (init_address[0], verified_data))
 
+                # Processing the command
                 cmd = j['cmd']
-                if (cmd == 'START' or cmd == 'RUN' or cmd == 'PERIOD' or cmd == 'THRESH') and running_global:
-                    logger.warning('Already running')
-                elif (cmd == 'GET' or cmd == 'STOP') and not running_global:
+                # Wrong command
+                if (cmd == 'START' or cmd == 'PERIOD' or cmd == 'THRESH') and running_global:
+                    logger.error('Already running')
+                elif (cmd == 'RUN') and running_global:
+                    logger.error('Already running')
+                    send_error('ERROR: Already running', init_address)
+                elif cmd == 'GET' and not running_global:
                     logger.error('Must first start the stat gathering with cmd: START')
                     send_error('ERROR: Must first start the stat gathering with cmd: START', init_address)
-                if cmd == 'RUN' and not running_global:
+                elif cmd == 'STOP' and not running_global:
+                    logger.error('Must first start the stat gathering with cmd: START')
+
+                # Normal behavior
+                elif cmd == 'RUN' and not running_global:
                     cmd_run(init_address, j)
                 elif cmd == 'START' and not running_global:
-                    cmd_start(j)
+                    cmd_start()
                 elif cmd == 'GET' and running_global:
                     cmd_get(init_address, j)
                 elif cmd == 'STOP' and running_global:
-                    cmd_stop(j)
+                    cmd_stop()
                 elif cmd == 'PERIOD' and not running_global:
                     cmd_period(init_address, j)
                 elif cmd == 'THRESH' and not running_global:
