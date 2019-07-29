@@ -88,6 +88,7 @@ int detect_snt_pkts(struct pt_regs *ctx){
 int detect_dport(struct pt_regs *ctx, struct sock *sk){
     u16 dport = -1;
     dport = sk->__sk_common.skc_dport;
+    dport = ntohs(dport);
     ports_map.increment(dport);
     return 0;
 }
