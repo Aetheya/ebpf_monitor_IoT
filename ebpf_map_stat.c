@@ -1,7 +1,7 @@
 #include <linux/skbuff.h>
 #include <uapi/linux/ip.h>
-#include <linux/types.h>
 #include <uapi/linux/if_ether.h>
+#include <linux/types.h>
 #include <net/sock.h>
 
 BPF_PERF_OUTPUT(events);// Channel to userspace for events
@@ -95,7 +95,7 @@ int detect_dport(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     return 0;
 }
 
-int detect_protocol(struct pt_regs *ctx, struct sock *sk){
+int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u8 protocol = -1;//protocol number
 
     // Workaround to get bitfield of protocol number
@@ -121,18 +121,18 @@ int detect_protocol(struct pt_regs *ctx, struct sock *sk){
     return 0;
 }
 
-int detect_arp(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
+int detect_arp(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u8 key= 2;
     stats_map.increment(key);
     return 0;
 }
 
-int detect_family(struct pt_regs *ctx, struct sk_buff *skb,struct sock *sk){
-    u8 key_ipv4= 3;
-    u8 key_ipv6= 4;
+int detect_family(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+    u8 index_ipv4= 3;
+    u8 index_ipv6= 4;
     u16 family = sk->__sk_common.skc_family;
-    if (family == AF_INET) stats_map.increment(key_ipv4);
-    else if (family == AF_INET6) stats_map.increment(key_ipv6);
+    if (family == AF_INET) stats_map.increment(index_ipv4);
+    else if (family == AF_INET6) stats_map.increment(index_ipv6);
     return 0;
 }
 

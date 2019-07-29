@@ -28,7 +28,7 @@ def parse():
     parser.add_argument("dest",
                         nargs=2,
                         help='eBPF device ip address'
-                        )  # ebpf machine
+                        )
     parser.add_argument("-t",
                         "--time",
                         type=int,
