@@ -85,13 +85,21 @@ int detect_snt_pkts(struct pt_regs *ctx){
     return 0;
 }
 
-int detect_dport(struct pt_regs *ctx, struct sock *sk){
+int detect_dport(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u16 dport = -1;
     dport = sk->__sk_common.skc_dport;
     dport = ntohs(dport);
     ports_map.increment(dport);
     return 0;
 }
+
+int detect_lport(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+
+    u16 lport = -1;
+    lport = sk->__sk_common.skc_num;
+    ports_map.increment(lport);
+    return 0;
+
 
 int detect_protocol(struct pt_regs *ctx, struct sock *sk){
     u8 protocol = -1;//protocol number

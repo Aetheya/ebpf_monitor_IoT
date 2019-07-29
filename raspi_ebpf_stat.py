@@ -102,9 +102,11 @@ def start_ebpf():
     b.attach_kprobe(event="ip_output", fn_name="detect_protocol")
     b.attach_kprobe(event="arp_rcv", fn_name="detect_arp")
     b.attach_kprobe(event="arp_send", fn_name="detect_arp")
-    b.attach_kprobe(event="ip_output", fn_name="detect_dport")
 
+    b.attach_kprobe(event="ip_output", fn_name="detect_dport")
     b.attach_kprobe(event="ip_rcv", fn_name="detect_dport")
+    b.attach_kprobe(event="ip_rcv", fn_name="detect_lport")
+    b.attach_kprobe(event="ip_output", fn_name="detect_lport")
 
     b.attach_kprobe(event="ip_output", fn_name="detect_family")
     b.attach_kprobe(event="ip_rcv", fn_name="detect_family")
