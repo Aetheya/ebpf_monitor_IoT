@@ -1,3 +1,6 @@
+#include <linux/skbuff.h>
+#include <linux/types.h>
+#include <uapi/linux/ip.h>
 #include <net/sock.h>
 
 BPF_PERF_OUTPUT(events);// Channel to userspace for events
