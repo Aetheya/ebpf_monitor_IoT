@@ -114,7 +114,7 @@ def start_ebpf():
     b.attach_kprobe(event='ip_rcv', fn_name='detect_family')
 
     # Loss
-    b.attach_kprobe(event='tcp_retransmit_skb', fn_name='detect_retrans_pkts')
+    b.attach_kprobe(event='tcp_retransmit_timer', fn_name='detect_retrans_pkts')
     b.attach_kprobe(event='tcp_validate_incoming', fn_name='detect_dupl_pkts')
 
 
@@ -214,11 +214,12 @@ def cmd_thresh(init_address, command):
 
         total_pkts = losing_rate_global.rcv_packets + losing_rate_global.snt_packets
         lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
-        logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
-        if ((lost_pkts / total_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
-            print('Loss rate:%f' % (lost_pkts / total_pkts))
-            send_stats(init_address, command)
-            last_moment_sent = time.time()
+        if total_pkts != 0:
+            logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
+            if ((lost_pkts / total_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
+                print('Loss rate:%f' % (lost_pkts / total_pkts))
+                send_stats(init_address, command)
+                last_moment_sent = time.time()
     stop_ebpf()
 
 
