@@ -306,6 +306,8 @@ def main():
                     logger.error('Wrong command')
                     print('ERROR: Wrong command')
 
+    except (KeyboardInterrupt, SystemExit):
+        print("\nClosed.")
     finally:
         logger.info('Closing socket')
         sock.close()
