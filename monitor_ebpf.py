@@ -39,8 +39,7 @@ def serialize_stats():
                              'ports': port_map_to_list(),
                              'ipv4_packets': b['stats_map'][3].value,
                              'ipv6_packets': b['stats_map'][4].value,
-                             'retrans_packets': b['stats_map'][5].value,
-                             'dupl_packets': b['stats_map'][6].value,
+                             'retrans_packets': b['stats_map'][5].value
                              })
     return serialized
 
@@ -115,7 +114,6 @@ def start_ebpf():
 
     # Loss
     b.attach_kprobe(event='tcp_retransmit_timer', fn_name='detect_retrans_pkts')
-    b.attach_kprobe(event='tcp_validate_incoming', fn_name='detect_dupl_pkts')
 
 
 def stop_ebpf():
@@ -128,7 +126,6 @@ def stop_ebpf():
     b.detach_kprobe('arp_rcv')
     b.detach_kprobe('arp_send')
     b.detach_kprobe('tcp_retransmit_timer')
-    b.detach_kprobe('tcp_validate_incoming')
 
     clean_maps()
 
@@ -186,11 +183,10 @@ def cmd_period(init_address, command):
 def parse_lost_data():
     """Parse loss concerned data for logging"""
     global losing_rate_global
-    msg = '[rcv :%s, snd :%s, retrans :%s, dup :%s]' % (
+    msg = '[rcv :%s, snd :%s, retrans :%s]' % (
         losing_rate_global.rcv_packets,
         losing_rate_global.snt_packets,
-        losing_rate_global.retrans_packets,
-        losing_rate_global.dup_packets)
+        losing_rate_global.retrans_packets)
     return msg
 
 
@@ -213,7 +209,7 @@ def cmd_thresh(init_address, command):
         logger.info(lost_data)
 
         total_pkts = losing_rate_global.rcv_packets + losing_rate_global.snt_packets
-        lost_pkts = losing_rate_global.retrans_packets + losing_rate_global.dup_packets
+        lost_pkts = losing_rate_global.retrans_packets
         if total_pkts != 0:
             logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
             if ((lost_pkts / total_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):

@@ -2,7 +2,6 @@
 #include <linux/types.h>
 #include <uapi/linux/ip.h>
 #include <net/sock.h>
-#include <linux/tcp.h>
 
 /* Channel to userspace for events */
 BPF_PERF_OUTPUT(events);//
@@ -19,7 +18,6 @@ stats_map[2]=arp_packets
 stats_map[3]=ipv4_packets
 stats_map[4]=ipv6_packets
 stats_map[5]=retrans_packets
-stats_map[6]=dup_packets
 
 proto_map[x]=y [x= protocol number y = counter]
 ports_map[x]=y [x= port number, y= counter]
@@ -29,34 +27,31 @@ struct losing_rate {
     u64 rcv_packets;
     u64 snt_packets;
     u64 retrans_packets;
-    u64 dup_packets;
 };
 
 static int process_loss(struct pt_regs *ctx){
 
     struct losing_rate rate = {};  // Object to be sent to userspace
-    int rcv_packets_index = 0, snt_packets_index = 1,  retrans_packets_index=5, dup_packets_index=6;
-    u64 *rcv_packets_ptr, *snt_packets_ptr, *retrans_packets_ptr, *dup_packets_ptr, zero=0 ;
+    int rcv_packets_index = 0, snt_packets_index = 1,  retrans_packets_index=5;
+    u64 *rcv_packets_ptr, *snt_packets_ptr, *retrans_packets_ptr, zero=0 ;
 
         /* Retrieve current stats linked to data loss */
         rcv_packets_ptr = stats_map.lookup_or_init(&rcv_packets_index,&zero);
         snt_packets_ptr = stats_map.lookup_or_init(&snt_packets_index,&zero);
         retrans_packets_ptr = stats_map.lookup_or_init(&retrans_packets_index,&zero);
-        dup_packets_ptr = stats_map.lookup_or_init(&dup_packets_index,&zero);
 
-    if(rcv_packets_ptr != 0 && snt_packets_ptr != 0 && retrans_packets_ptr !=0 && dup_packets_ptr !=0){
+    if(rcv_packets_ptr != 0 && snt_packets_ptr != 0 && retrans_packets_ptr !=0 ){
         /* Fill object to be sent to userspace */
         rate.rcv_packets = *rcv_packets_ptr;
         rate.snt_packets = *snt_packets_ptr;
         rate.retrans_packets =*retrans_packets_ptr;
-        rate.dup_packets = *dup_packets_ptr;
 
         events.perf_submit(ctx, &rate, sizeof(rate)); // Send data to userspace
     }
         return 0;
 }
 
-int detect_rcv_pkts(struct pt_regs *ctx){
+int detect_rcv_pkts(struct pt_regs *ctx, struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev){
     int rcv_pkts_index = 0;
     u64 rcv_packets_nb_inter = 0, *rcv_packets_nb_ptr;
 
@@ -73,7 +68,7 @@ int detect_rcv_pkts(struct pt_regs *ctx){
     return 0;
 }
 
-int detect_snt_pkts(struct pt_regs *ctx){
+int detect_snt_pkts(struct pt_regs *ctx, struct net *net, struct sock *sk, struct sk_buff *skb){
     int snt_pkts_index = 1;
     u64 snt_packets_nb_inter = 0, *snt_packets_nb_ptr;
 
@@ -89,7 +84,7 @@ int detect_snt_pkts(struct pt_regs *ctx){
     return 0;
 }
 
-int detect_dport(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+int detect_dport(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
     u16 dport = -1;
     dport = sk->__sk_common.skc_dport;
     dport = ntohs(dport);
@@ -97,7 +92,7 @@ int detect_dport(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     return 0;
 }
 
-int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+int detect_protocol(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
     u8 protocol = -1;//protocol number
 
     // Workaround to get bitfield of protocol number
@@ -123,13 +118,13 @@ int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     return 0;
 }
 
-int detect_arp(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+int detect_arp(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
     u8 key= 2;
     stats_map.increment(key);
     return 0;
 }
 
-int detect_family(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+int detect_family(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
     u8 index_ipv4= 3;
     u8 index_ipv6= 4;
     u16 family = sk->__sk_common.skc_family;
@@ -138,36 +133,9 @@ int detect_family(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     return 0;
 }
 
-int detect_retrans_pkts(struct pt_regs *ctx){
+int detect_retrans_pkts(struct pt_regs *ctx, struct sock *sk){
     u8 index= 5;
     stats_map.increment(index);
     process_loss(ctx);
-    return 0;
-}
-
-int detect_dupl_pkts(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk, const struct tcphdr *th, int syn_inerr){
-    u8 index= 6;
-
-    /* Fetch skb head seq */
-
-
-	//bpf_probe_read(&rcv_nxt, sizeof(rcv_nxt), ((const char *)skb) +
-	//	       offsetof(struct sk_buff, rcv_nxt));
-
-    u32 rcv_nxt = 0;
-	bpf_probe_read(&rcv_nxt, sizeof(rcv_nxt), ((const char *)sk) +
-		       offsetof(struct tcp_sock, rcv_nxt));
-	return rcv_nxt;
-
-    u32 seq = 0;
-	bpf_probe_read(&seq, sizeof(seq), ((const char *)skb) +
-		       offsetof(struct sk_buff, cb) +
-		       offsetof(struct tcp_skb_cb, seq));
-
-	int32_t dist = (int32_t)(end_seq - rcv_nxt);
-	if (dist < 0) {
-	    stats_map.increment(index);
-	    process_loss(ctx);
-	}
     return 0;
 }
