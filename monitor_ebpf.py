@@ -208,12 +208,12 @@ def cmd_thresh(init_address, command):
         lost_data = parse_lost_data()
         logger.info(lost_data)
 
-        total_pkts = losing_rate_global.rcv_packets + losing_rate_global.snt_packets
-        lost_pkts = losing_rate_global.retrans_packets
-        if total_pkts != 0:
-            logger.info('Loss rate:%f' % (lost_pkts / total_pkts))
-            if ((lost_pkts / total_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
-                print('Loss rate:%f' % (lost_pkts / total_pkts))
+        sent_pkts = losing_rate_global.snt_packets
+        retrans_pkts = losing_rate_global.retrans_packets
+        if sent_pkts != 0:
+            logger.info('Loss rate:%f' % (retrans_pkts / sent_pkts))
+            if ((retrans_pkts / sent_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
+                print('Loss rate:%f' % (retrans_pkts / sent_pkts))
                 send_stats(init_address, command)
                 last_moment_sent = time.time()
     stop_ebpf()

@@ -24,7 +24,6 @@ ports_map[x]=y [x= port number, y= counter]
 */
 
 struct losing_rate {
-    u64 rcv_packets;
     u64 snt_packets;
     u64 retrans_packets;
 };
@@ -33,16 +32,14 @@ static int process_loss(struct pt_regs *ctx){
 
     struct losing_rate rate = {};  // Object to be sent to userspace
     int rcv_packets_index = 0, snt_packets_index = 1,  retrans_packets_index=5;
-    u64 *rcv_packets_ptr, *snt_packets_ptr, *retrans_packets_ptr, zero=0 ;
+    u64 *snt_packets_ptr, *retrans_packets_ptr, zero=0 ;
 
         /* Retrieve current stats linked to data loss */
-        rcv_packets_ptr = stats_map.lookup_or_init(&rcv_packets_index,&zero);
         snt_packets_ptr = stats_map.lookup_or_init(&snt_packets_index,&zero);
         retrans_packets_ptr = stats_map.lookup_or_init(&retrans_packets_index,&zero);
 
-    if(rcv_packets_ptr != 0 && snt_packets_ptr != 0 && retrans_packets_ptr !=0 ){
+    if(snt_packets_ptr != 0 && retrans_packets_ptr !=0 ){
         /* Fill object to be sent to userspace */
-        rate.rcv_packets = *rcv_packets_ptr;
         rate.snt_packets = *snt_packets_ptr;
         rate.retrans_packets =*retrans_packets_ptr;
 
