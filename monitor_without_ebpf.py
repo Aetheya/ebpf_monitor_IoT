@@ -81,7 +81,7 @@ def send_stats(initiator, command):
     logger.info('Stats sent to %s' % (stat_dst[0]))
     print('Stats sent to %s' % (stat_dst[0]))
 
-    clean_maps()
+    #clean_maps()
 
 
 def clean_maps():
