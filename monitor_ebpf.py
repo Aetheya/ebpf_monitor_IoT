@@ -20,6 +20,7 @@ running_global = 0
 losing_rate_global = 0
 start_time_global = 0
 b = BPF(src_file='monitor_ebpf.c')
+c = BPF(src_file='monitor_ebpf.c')
 
 host_address = ('', 10000)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
