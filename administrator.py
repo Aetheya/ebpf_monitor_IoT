@@ -46,7 +46,7 @@ def parse():
                         "--rate",
                         type=float,
                         default=0.05,  # 5% loss
-                        help='max rate of loss accepted (pkt_retrans/pkt_sent>rate)')
+                        help='max rate of loss accepted (pkt_retrans/pkt_sent >rate)')
     args = parser.parse_args()
     logger.info('PARSED: [%s]' % args)
     return args

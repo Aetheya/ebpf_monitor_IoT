@@ -147,6 +147,7 @@ def cmd_period(init_address, command):
 
     future = time.time() + command['time']
     while time.time() < future:  # Total period of stats gathering
+        print('Next period')
         start_time_global = time.time()  # eBPF starting timestamp
         time.sleep(command['interval'])  # Interval between two stats gathering
         send_stats(init_address, command)
