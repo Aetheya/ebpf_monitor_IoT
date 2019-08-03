@@ -2,9 +2,12 @@
 #include <linux/types.h>
 #include <uapi/linux/ip.h>
 #include <net/sock.h>
+#include <linux/tcp.h>
 
-BPF_PERF_OUTPUT(events);// Channel to userspace for events
+/* Channel to userspace for events */
+BPF_PERF_OUTPUT(events);//
 
+/* Maps shared between kernel and userspace */
 BPF_ARRAY(stats_map, u64,256);
 BPF_ARRAY(proto_map, u8, 256);
 BPF_ARRAY(ports_map, u16, 65536);
@@ -142,9 +145,29 @@ int detect_retrans_pkts(struct pt_regs *ctx){
     return 0;
 }
 
-int detect_dupl_pkts(struct pt_regs *ctx){
+int detect_dupl_pkts(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk, const struct tcphdr *th, int syn_inerr){
     u8 index= 6;
-    stats_map.increment(index);
-    process_loss(ctx);
+
+    /* Fetch skb head seq */
+
+
+	//bpf_probe_read(&rcv_nxt, sizeof(rcv_nxt), ((const char *)skb) +
+	//	       offsetof(struct sk_buff, rcv_nxt));
+
+    u32 rcv_nxt = 0;
+	bpf_probe_read(&rcv_nxt, sizeof(rcv_nxt), ((const char *)sk) +
+		       offsetof(struct tcp_sock, rcv_nxt));
+	return rcv_nxt;
+
+    u32 seq = 0;
+	bpf_probe_read(&seq, sizeof(seq), ((const char *)skb) +
+		       offsetof(struct sk_buff, cb) +
+		       offsetof(struct tcp_skb_cb, seq));
+
+	int32_t dist = (int32_t)(end_seq - rcv_nxt);
+	if (dist < 0) {
+	    stats_map.increment(index);
+	    process_loss(ctx);
+	}
     return 0;
 }

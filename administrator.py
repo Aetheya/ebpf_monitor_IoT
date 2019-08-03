@@ -37,7 +37,7 @@ def parse():
     parser.add_argument("-i",
                         "--interval",
                         type=int, default=2,
-                        help='period interval between two stat gathering [PERIOD]')
+                        help='<=time, period interval between two stat gathering [PERIOD]')
     parser.add_argument("-s",
                         "--server",
                         nargs=2,
@@ -76,11 +76,14 @@ def serialize_cmd(command):
             return json.dumps({'cmd': command.cmd
                                })
     elif command.cmd == 'PERIOD' and command.server:
-        return json.dumps({'cmd': command.cmd,
-                           'server': command.server,
-                           'time': command.time,
-                           'interval': command.interval
-                           })
+        if command.time < command.interval:
+            return -1
+        else:
+            return json.dumps({'cmd': command.cmd,
+                               'server': command.server,
+                               'time': command.time,
+                               'interval': command.interval
+                               })
     elif command.cmd == 'THRESH' and command.server:
         return json.dumps({'cmd': command.cmd,
                            'server': command.server,
@@ -125,7 +128,7 @@ def main():
     dest_address = (command.dest[0], int(command.dest[1]))
     message = serialize_cmd(command)
     if message == -1:
-        print('Malformed input')
+        print('Malformed input, use --help')
         return -1
     try:
 

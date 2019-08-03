@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 running_global = 0
 losing_rate_global = 0
 start_time_global = 0
-b = BPF(src_file='ebpf_map_stat.c')
+b = BPF(src_file='monitor_ebpf.c')
 
 host_address = ('', 10000)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -68,7 +68,7 @@ def random_wait():
 
 
 def send_stats(initiator, command):
-    """Sends statistics to server and ack to the initiator"""
+    """Sends statistics to server or initiator"""
     json_stats = serialize_stats()
     logger.info('Gathered stats:%s' % json_stats)
 
@@ -134,7 +134,7 @@ def stop_ebpf():
 
 
 def cmd_run(init_address, command):
-    """Run eBPF statistic gathering for x seconds"""
+    """RUN command process"""
     global start_time_global
     logger.info('RUN for %s sec' % command['time'])
     start_ebpf()
