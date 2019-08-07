@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 
 running_global = 0
 losing_rate_global = 0
@@ -208,6 +208,7 @@ def cmd_thresh(init_address, command):
         start_time_global = time.time()
         b.perf_buffer_poll(10000)  # Block until event happens or TO after 10sec
 
+        # If some lost data has been found
         if losing_rate_global != 0:
             lost_data = parse_lost_data()
             logger.info(lost_data)
