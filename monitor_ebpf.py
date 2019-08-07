@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 running_global = 0
 losing_rate_global = 0
@@ -207,7 +207,7 @@ def cmd_thresh(init_address, command):
     last_moment_sent = time.time()  # Last time data was sent
     while time.time() < future:
         start_time_global = time.time()
-        b.perf_buffer_poll()  # Block until event happens
+        b.perf_buffer_poll(10)  # Block until event happens or TO after 10sec
         lost_data = parse_lost_data()
         logger.info(lost_data)
 
