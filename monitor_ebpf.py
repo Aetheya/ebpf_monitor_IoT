@@ -206,7 +206,7 @@ def cmd_thresh(init_address, command):
     last_moment_sent = time.time()  # Last time data was sent
     while time.time() < future:
         start_time_global = time.time()
-        b.perf_buffer_poll(10)  # Block until event happens or TO after 10sec
+        b.perf_buffer_poll(10000)  # Block until event happens or TO after 10sec
 
         if losing_rate_global != 0:
             lost_data = parse_lost_data()
