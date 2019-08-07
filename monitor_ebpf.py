@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 running_global = 0
 losing_rate_global = 0
 start_time_global = 0
+command_global = []
 b = BPF(src_file='monitor_ebpf.c')
 
 host_address = ('', 10000)
@@ -32,9 +33,9 @@ def serialize_stats():
                              'time_end': time.time(),
                              'rcv_packets': b['stats_map'][0].value,
                              'snt_packets': b['stats_map'][1].value,
-                             'tcp_packets': b['proto_map'][socket.IPPROTO_TCP].value,
-                             'udp_packets': b['proto_map'][socket.IPPROTO_UDP].value,
-                             'icmp_packets': b['proto_map'][socket.IPPROTO_ICMP].value,
+                             'tcp_packets': b['proto_map_snd'][socket.IPPROTO_TCP].value,
+                             'udp_packets': b['proto_map_snd'][socket.IPPROTO_UDP].value,
+                             'icmp_packets': b['proto_map_snd'][socket.IPPROTO_ICMP].value,
                              'arp_packets': b['stats_map'][2].value,
                              'ports': port_map_to_list(),
                              'ipv4_packets': b['stats_map'][3].value,
@@ -86,13 +87,13 @@ def send_stats(initiator, command):
 
 def clean_maps():
     b['stats_map'].clear()
-    b['proto_map'].clear()
+    b['proto_map_snd'].clear()
     b['ports_map'].clear()
 
 
 def start_ebpf():
     """Start eBPF statistic gathering"""
-    global running_global
+    global running_global, command_global
     running_global = 1
 
     # Packets
@@ -100,8 +101,7 @@ def start_ebpf():
     b.attach_kprobe(event='ip_output', fn_name='detect_snt_pkts')
 
     # Protocols
-    b.attach_kprobe(event='ip_rcv', fn_name='detect_protocol')
-    b.attach_kprobe(event='ip_output', fn_name='detect_protocol')
+    b.attach_kprobe(event='ip_output', fn_name='detect_protocol_snd')
     b.attach_kprobe(event='arp_rcv', fn_name='detect_arp')
     b.attach_kprobe(event='arp_send', fn_name='detect_arp')
 
@@ -113,7 +113,10 @@ def start_ebpf():
     b.attach_kprobe(event='ip_rcv', fn_name='detect_family')
 
     # Loss
-    b.attach_kprobe(event='tcp_retransmit_timer', fn_name='detect_retrans_pkts')
+    if command_global['cmd'] == 'THRESH':
+        b.attach_kprobe(event='tcp_retransmit_timer', fn_name='detect_thresh_pkts')
+    else:
+        b.attach_kprobe(event='tcp_retransmit_timer', fn_name='detect_retrans_pkts')
 
 
 def stop_ebpf():
@@ -270,6 +273,8 @@ def main():
                 send_error('Bad signature', init_address)
             else:
                 j = json.loads(verified_data)
+                global command_global
+                command_global = j
                 print('\nMessage received from %s:\n%s\n' % (init_address[0], verified_data))
 
                 # Processing the command
@@ -307,7 +312,6 @@ def main():
         print("\nClosed.")
     finally:
         logger.info('Closing socket')
-        stop_ebpf()
         sock.close()
 
 

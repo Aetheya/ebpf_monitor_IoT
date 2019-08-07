@@ -8,8 +8,9 @@ BPF_PERF_OUTPUT(events);//
 
 /* Maps shared between kernel and userspace */
 BPF_ARRAY(stats_map, u64, 8);
-BPF_ARRAY(proto_map, u8, 256);
-BPF_ARRAY(ports_map, u16, 65536);
+BPF_ARRAY(proto_map_snd, u64, 256);
+BPF_ARRAY(ports_map, u64, 65536);
+
 
 /*
 stats_map[0]=rcv_packets
@@ -81,7 +82,7 @@ int detect_snt_pkts(struct pt_regs *ctx, struct net *net, struct sock *sk, struc
     return 0;
 }
 
-int detect_dport(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
+int detect_dport(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u16 dport = -1;
     dport = sk->__sk_common.skc_dport;
     dport = ntohs(dport);
@@ -89,10 +90,10 @@ int detect_dport(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, stru
     return 0;
 }
 
-int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+int detect_protocol_snd(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u8 protocol = -1;//protocol number
 
-    // Workaround to get bitfield of protocol number
+    // Workaround to get bitfield of protocol number found on official BCC Github.
     int gso_max_segs_offset = offsetof(struct sock, sk_gso_max_segs);
     int sk_lingertime_offset = offsetof(struct sock, sk_lingertime);
     if (sk_lingertime_offset - gso_max_segs_offset == 4)
@@ -111,17 +112,17 @@ int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
 #else
 # error "Fix your compiler's __BYTE_ORDER__"
 #endif
-    proto_map.increment(protocol);
+    proto_map_snd.increment(protocol);
     return 0;
 }
 
-int detect_arp(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
+int detect_arp(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u8 key= 2;
     stats_map.increment(key);
     return 0;
 }
 
-int detect_family(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
+int detect_family(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u8 index_ipv4= 3;
     u8 index_ipv6= 4;
     u16 family = sk->__sk_common.skc_family;
@@ -130,7 +131,13 @@ int detect_family(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, str
     return 0;
 }
 
-int detect_retrans_pkts(struct pt_regs *ctx, struct sock *sk){
+int detect_retrans_pkts(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
+    u8 index= 5;
+    stats_map.increment(index);
+    return 0;
+}
+
+int detect_thresh_pkts(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u8 index= 5;
     stats_map.increment(index);
     process_loss(ctx);
