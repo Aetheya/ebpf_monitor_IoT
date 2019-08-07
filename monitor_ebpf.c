@@ -89,7 +89,7 @@ int detect_dport(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, stru
     return 0;
 }
 
-int detect_protocol(struct pt_regs *ctx, struct net *net, struct sk_buff *skb, struct sock *sk){
+int detect_protocol(struct pt_regs *ctx, struct sk_buff *skb, struct sock *sk){
     u8 protocol = -1;//protocol number
 
     // Workaround to get bitfield of protocol number
