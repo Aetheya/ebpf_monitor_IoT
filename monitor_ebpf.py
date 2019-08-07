@@ -25,7 +25,6 @@ b = BPF(src_file='monitor_ebpf.c')
 host_address = ('', 10000)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-
 def serialize_stats():
     """Parse gathered statistics to JSON format"""
     global start_time_global
@@ -208,17 +207,19 @@ def cmd_thresh(init_address, command):
     while time.time() < future:
         start_time_global = time.time()
         b.perf_buffer_poll(10)  # Block until event happens or TO after 10sec
-        lost_data = parse_lost_data()
-        logger.info(lost_data)
 
-        sent_pkts = losing_rate_global.snt_packets
-        retrans_pkts = losing_rate_global.retrans_packets
-        if sent_pkts != 0:
-            logger.info('Loss rate:%f' % (retrans_pkts / sent_pkts))
-            if ((retrans_pkts / sent_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
-                print('Loss rate:%f' % (retrans_pkts / sent_pkts))
-                send_stats(init_address, command)
-                last_moment_sent = time.time()
+        if losing_rate_global != 0:
+            lost_data = parse_lost_data()
+            logger.info(lost_data)
+
+            sent_pkts = losing_rate_global.snt_packets
+            retrans_pkts = losing_rate_global.retrans_packets
+            if sent_pkts != 0:
+                logger.info('Loss rate:%f' % (retrans_pkts / sent_pkts))
+                if ((retrans_pkts / sent_pkts) > command['rate']) and ((time.time() - last_moment_sent) > send_interval):
+                    print('Loss rate:%f' % (retrans_pkts / sent_pkts))
+                    send_stats(init_address, command)
+                    last_moment_sent = time.time()
     stop_ebpf()
 
 
