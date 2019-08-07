@@ -145,8 +145,10 @@ def main():
         if not command.server and command.cmd in ['GET', 'RUN']:
             print('Waiting an answer...\n')
             data, device = sock.recvfrom(4096)
-            logger.info("Answer from %s: %s " % (device[0], data))
-            print('Answer from %s:\n%s' % (device[0], data))
+            parsed = json.loads(data)
+            printable = json.dumps(parsed, indent=4, sort_keys=True)
+            logger.info("Answer from %s: %s " % (device[0], printable))
+            print('Answer from %s:\n%s' % (device[0], printable))
 
     finally:
         logger.info("Closing socket")
