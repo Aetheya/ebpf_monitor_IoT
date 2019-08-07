@@ -187,8 +187,7 @@ def cmd_period(init_address, command):
 def parse_lost_data():
     """Parse loss concerned data for logging"""
     global losing_rate_global
-    msg = '[rcv :%s, snd :%s, retrans :%s]' % (
-        losing_rate_global.rcv_packets,
+    msg = '[snd :%s, retrans :%s]' % (
         losing_rate_global.snt_packets,
         losing_rate_global.retrans_packets)
     return msg
