@@ -307,6 +307,7 @@ def main():
         print("\nClosed.")
     finally:
         logger.info('Closing socket')
+        stop_ebpf()
         sock.close()
 
 

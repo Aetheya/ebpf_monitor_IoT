@@ -7,7 +7,7 @@
 BPF_PERF_OUTPUT(events);//
 
 /* Maps shared between kernel and userspace */
-BPF_ARRAY(stats_map, u64,256);
+BPF_ARRAY(stats_map, u64, 8);
 BPF_ARRAY(proto_map, u8, 256);
 BPF_ARRAY(ports_map, u16, 65536);
 
