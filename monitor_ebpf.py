@@ -207,6 +207,7 @@ def cmd_thresh(init_address, command):
     while time.time() < future:
         if time.time() - last_moment_sent > command['interval']:
             clean_maps()
+            logger.info('Next period')
         start_time_global = time.time()
         b.perf_buffer_poll(10000)  # Block until event happens or TO after 10sec
 
