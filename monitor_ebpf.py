@@ -205,6 +205,8 @@ def cmd_thresh(init_address, command):
     send_interval = 2  # Slow start and min. interval between two sending
     last_moment_sent = time.time()  # Last time data was sent
     while time.time() < future:
+        if time.time() - last_moment_sent > command['interval']:
+            clean_maps()
         start_time_global = time.time()
         b.perf_buffer_poll(10000)  # Block until event happens or TO after 10sec
 

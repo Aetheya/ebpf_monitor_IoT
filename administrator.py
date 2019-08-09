@@ -36,8 +36,9 @@ def parse():
                         help='period of stat gathering [RUN], [PERIOD], [THRESH]')
     parser.add_argument("-i",
                         "--interval",
-                        type=int, default=2,
-                        help='<=time, period interval between two stat gathering [PERIOD]')
+                        type=int, default=5,
+                        help='<=time, period interval between two stat gathering [PERIOD]\\'
+                             'maximum period interval for stat gathering [THRESH]')
     parser.add_argument("-s",
                         "--server",
                         nargs=2,
@@ -88,7 +89,8 @@ def serialize_cmd(command):
         return json.dumps({'cmd': command.cmd,
                            'server': command.server,
                            'time': command.time,
-                           'rate': command.rate
+                           'rate': command.rate,
+                           'interval': command.interval
                            })
     else:
         logger.error("Malformed input")
