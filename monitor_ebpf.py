@@ -206,6 +206,7 @@ def cmd_thresh(init_address, command):
     last_moment_sent = time.time()  # Last time data was sent
     while time.time() < future:
         if time.time() - last_moment_sent > command['interval']:
+            last_moment_sent = time.time()
             clean_maps()
             logger.info('Next period')
         start_time_global = time.time()
