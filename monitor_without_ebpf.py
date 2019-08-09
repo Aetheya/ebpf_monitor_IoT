@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 b = {'stats_map': [0] * 100, 'proto_map': [0] * 100, 'ports_map': [0] * 100}
 
