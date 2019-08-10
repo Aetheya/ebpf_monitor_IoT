@@ -129,7 +129,7 @@ def stop_ebpf():
     b.detach_kprobe('arp_send')
     b.detach_kprobe('tcp_retransmit_timer')
 
-    clean_maps()
+    #clean_maps()
 
 
 def cmd_run(init_address, command):

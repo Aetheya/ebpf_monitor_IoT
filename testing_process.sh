@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-python START 192.168.1.49 10000;
+date
+python administrator.py START 192.168.1.49 10000;
 sleep 15
-python GET 192.168.1.49 10000;
-sleep 15
-python STOP 192.168.1.49 10000;
+date
+python administrator.py GET 192.168.1.49 10000;
+sleep 11
+date
+python administrator.py STOP 192.168.1.49 10000;
