@@ -85,9 +85,11 @@ def send_stats(initiator, command):
 
 
 def clean_maps():
+    global losing_rate_global
     b['stats_map'].clear()
     b['proto_map_snd'].clear()
     b['ports_map'].clear()
+    losing_rate_global = 0
 
 
 def start_ebpf():
