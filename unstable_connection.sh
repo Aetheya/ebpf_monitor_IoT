@@ -11,11 +11,11 @@ bash get_request.sh;
 date
 bash drop_pkts.sh;
 bash get_request.sh;
-sleep 3
+sleep 2
 bash get_request.sh;
-sleep 3
+sleep 2
 bash get_request.sh;
-sleep 4
+sleep 2
 bash get_request.sh;
 
 date
