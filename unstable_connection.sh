@@ -5,7 +5,7 @@ sleep 3
 bash get_request.sh;
 sleep 3
 bash get_request.sh;
-sleep 4
+sleep 3
 bash get_request.sh;
 
 date
