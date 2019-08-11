@@ -123,14 +123,13 @@ def stop_ebpf():
     global running_global
     running_global = 0
 
-    clean_maps()
     b.detach_kprobe('ip_rcv')
     b.detach_kprobe('ip_output')
     b.detach_kprobe('arp_rcv')
     b.detach_kprobe('arp_send')
     b.detach_kprobe('tcp_retransmit_timer')
 
-
+    clean_maps()
 
 
 def cmd_run(init_address, command):
