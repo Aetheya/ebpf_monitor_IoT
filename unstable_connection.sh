@@ -1,33 +1,11 @@
 #!/usr/bin/env bash
 date
-bash get_request.sh;
-sleep 3
-bash get_request.sh;
-sleep 3
-bash get_request.sh;
-sleep 3
-bash get_request.sh;
 
+for i in `seq 10`; do curl --location --request GET "https://postman-echo.com/get?foo1=bar1&foo2=bar2"; done
+sleep 3
 date
 bash drop_pkts.sh;
-bash get_request.sh;
-bash get_request.sh;
-
-bash get_request.sh;
-bash get_request.sh;
-
-bash get_request.sh;
-bash get_request.sh;
-
-bash get_request.sh;
-bash get_request.sh;
-
+for i in `seq 10`; do curl --location --request GET "https://postman-echo.com/get?foo1=bar1&foo2=bar2"; done
 date
 bash reset_iptables.sh;
-bash get_request.sh;
-sleep 3
-bash get_request.sh;
-sleep 3
-bash get_request.sh;
-sleep 4
-bash get_request.sh;
+for i in `seq 10`; do curl --location --request GET "https://postman-echo.com/get?foo1=bar1&foo2=bar2"; done
