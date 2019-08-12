@@ -20,7 +20,7 @@ stats_map[3]=ipv4_packets
 stats_map[4]=ipv6_packets
 stats_map[5]=retrans_packets
 
-proto_map[x]=y [x= protocol number y = counter]
+proto_map_snd[x]=y [x= protocol number y = counter]
 ports_map[x]=y [x= port number, y= counter]
 */
 
@@ -32,11 +32,11 @@ struct losing_rate {
 static int process_loss(struct pt_regs *ctx){
 
     struct losing_rate rate = {};  // Object to be sent to userspace
-    int rcv_packets_index = 0, snt_packets_index = 1,  retrans_packets_index=5;
+    int rcv_packets_index = 0, tcp_packets_index = IPPROTO_TCP,  retrans_packets_index=5;
     u64 *snt_packets_ptr, *retrans_packets_ptr, zero=0 ;
 
         /* Retrieve current stats linked to data loss */
-        snt_packets_ptr = stats_map.lookup_or_init(&snt_packets_index,&zero);
+        snt_packets_ptr = proto_map_snd.lookup_or_init(&tcp_packets_index,&zero);
         retrans_packets_ptr = stats_map.lookup_or_init(&retrans_packets_index,&zero);
 
     if(snt_packets_ptr != 0 && retrans_packets_ptr !=0 ){

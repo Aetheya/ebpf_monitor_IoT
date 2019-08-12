@@ -132,6 +132,7 @@ def stop_ebpf():
     b.detach_kprobe('arp_rcv')
     b.detach_kprobe('arp_send')
     b.detach_kprobe('tcp_retransmit_timer')
+    b.detach_kprobe('tcp_fastretrans_alert')
 
     clean_maps()
 
