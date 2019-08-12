@@ -11,10 +11,11 @@ print('connecting to %s port %s' % server_address)
 sock.connect(server_address)
 
 try:
+        print('Running')
         while True:
                 # Send data
                 message = 'This is the message.  It will be repeated.'
-                print('sending "%s"' % message)
+                #print('sending "%s"' % message)
                 sock.sendall(message)
 
                 # Look for the response
@@ -24,7 +25,7 @@ try:
                 while amount_received < amount_expected:
                         data = sock.recv(16)
                         amount_received += len(data)
-                        print('received "%s"' % data)
+                        #print('received "%s"' % data)
                 sleep(1)
 
 finally:
