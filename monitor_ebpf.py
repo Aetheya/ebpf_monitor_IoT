@@ -77,11 +77,16 @@ def send_stats(initiator, command):
         stat_dst = initiator
 
     random_wait()  # Avoid sync between eBPF devices
-    sock.sendto(json_stats, stat_dst)
-    logger.info('Stats sent to %s' % (stat_dst[0]))
-    print('Stats sent to %s' % (stat_dst[0]))
+    try:
+        sock.sendto(json_stats, stat_dst)
+        logger.info('Stats sent to %s' % (stat_dst[0]))
+        print('Stats sent to %s' % (stat_dst[0]))
+        clean_maps()
+    except socket.error:
+        print('ERROR: Stats not sent')
 
-    clean_maps()
+
+
 
 
 def clean_maps():
