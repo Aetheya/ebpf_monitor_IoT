@@ -26,7 +26,7 @@ try:
                         data = sock.recv(16)
                         amount_received += len(data)
                         #print('received "%s"' % data)
-                sleep(1)
+                sleep(0.01)
 
 finally:
         print('closing socket')
