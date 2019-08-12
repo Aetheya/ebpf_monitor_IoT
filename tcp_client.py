@@ -17,15 +17,6 @@ try:
                 message = 'This is the message.  It will be repeated.'
                 #print('sending "%s"' % message)
                 sock.sendall(message)
-
-                # Look for the response
-                amount_received = 0
-                amount_expected = len(message)
-
-                while amount_received < amount_expected:
-                        data = sock.recv(16)
-                        amount_received += len(data)
-                        #print('received "%s"' % data)
                 sleep(0.01)
 
 finally:

@@ -18,13 +18,12 @@ while True:
         print('connection from', client_address)
 
         # Receive the data in small chunks and retransmit it
+        incr = 0
         while True:
             data = connection.recv(16)
-            print('received "%s"' % data)
-            if data:
-                print('sending data back to the client')
-                connection.sendall(data)
-            else:
+            incr = incr+1
+            print('received msg' + incr)
+            if not data:
                 print('no more data from', client_address)
                 break
 
