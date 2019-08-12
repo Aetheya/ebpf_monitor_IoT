@@ -116,10 +116,10 @@ def start_ebpf():
     # Loss
     if command_global['cmd'] == 'THRESH':
         b.attach_kprobe(event='tcp_retransmit_timer', fn_name='detect_thresh_pkts')
-        b.attach_kprobe(event='tcp_fast_retrans_alert', fn_name='detect_thresh_pkts')
+        b.attach_kprobe(event='tcp_fastretrans_alert', fn_name='detect_thresh_pkts')
     else:
         b.attach_kprobe(event='tcp_retransmit_timer', fn_name='detect_retrans_pkts')
-        b.attach_kprobe(event='tcp_fast_retrans_alert', fn_name='detect_retrans_pkts')
+        b.attach_kprobe(event='tcp_fastretrans_alert', fn_name='detect_retrans_pkts')
 
 
 def stop_ebpf():
