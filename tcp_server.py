@@ -22,7 +22,7 @@ while True:
         while True:
             data = connection.recv(16)
             incr = incr+1
-            print('received msg' + incr)
+            print(incr)
             if not data:
                 print('no more data from', client_address)
                 break
