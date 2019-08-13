@@ -220,7 +220,7 @@ def cmd_thresh(init_address, command):
             logger.info('Next period')
             last_moment_sent = time.time()
         start_time_global = time.time()
-        b.perf_buffer_poll(5000)  # Block until event happens or TO after 5sec
+        b.perf_buffer_poll(future-time.time())  # Block until event happens or TO
 
         # If some lost data has been found
         if losing_rate_global != 0:
