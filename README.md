@@ -9,4 +9,4 @@ Usage:
     - (running) GET [M] (-s [C])
     - (running) STOP [M]
     - PERIOD [M] -s [C] (-i interval) (-t time)
-    - (running) THRESH [M] -s [C] (-r rate) (t-time)
+    - (running) THRESH [M] -s [C] (-r rate) (t time) (-i interval)
