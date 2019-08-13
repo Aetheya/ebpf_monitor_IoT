@@ -6,6 +6,8 @@ import json
 import logging
 import random
 
+from datetime import datetime
+
 import base64
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -196,7 +198,8 @@ def cmd_period(init_address, command):
 def parse_lost_data():
     """Parse loss concerned data for logging"""
     global losing_rate_global
-    msg = '[snd :%s, retrans :%s]' % (
+    msg = '%s :[snd :%s, retrans :%s]' % (
+        datetime.fromtimestamp(time.time()).strftime("%H:%M:%S"),
         losing_rate_global.snt_packets,
         losing_rate_global.retrans_packets)
     return msg
